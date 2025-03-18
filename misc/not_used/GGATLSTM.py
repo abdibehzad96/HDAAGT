@@ -9,11 +9,11 @@ from shapely.geometry import Point, Polygon
 import re
 import random
 # Architecture Multi layer GATS concatenated at the end
-from models.GraphAttention import *
-from models.Transformer import *
+from models.modules import *
+from misc.not_used.Transformer import *
 
 from utilz.utils import target_mask , create_src_mask
-from models.Transformer import *
+from misc.not_used.Transformer import *
 
 # import torch.nn as nn
 # import torch.nn.functional as F

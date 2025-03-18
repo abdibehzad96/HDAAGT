@@ -22,7 +22,7 @@ epoch_losses = torch.load(os.path.join(os.getcwd(),'Pickled', code + 'epoch_loss
 
 from utilz.utils import *
 import torch.nn.functional as F
-from models.GGAT import *
+from models.HGAAGT import *
 Best_Model=torch.load(os.path.join(os.getcwd(),'Processed', code + 'Bestmodel.pth'))
 # Best_Model_dict = Best_Model.state_dict()
 

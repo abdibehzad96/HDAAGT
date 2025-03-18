@@ -2,62 +2,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch_geometric
-from torch_geometric.nn.conv import GATConv, GATv2Conv
-from pytorch_geometric_temporal.torch_geometric_temporal.nn.recurrent import A3TGCN, A3TGCN2
-from pytorch_geometric_temporal.torch_geometric_temporal.nn.attention import *
-import yaml
-from shapely.geometry import Point, Polygon
-import re
-
-# Architecture Multi layer GATS concatenated at the end
-from models.GraphAttention import *
-from models.Transformer import *
-
-from utilz.utils import target_mask , create_src_mask
-from models.Transformer import *
-
-# import torch.nn as nn
-# import torch.nn.functional as F
-# from pygcn.layers import GraphConvolution
-
-
-
-def positional_encoding(x, d_model):
-
-        # result.shape = (seq_len, d_model)
-        result = torch.zeros(
-            (x.size(1), d_model),
-            dtype=torch.float,
-            requires_grad=False
-        )
-
-        # pos.shape = (seq_len, 1)
-        pos = torch.arange(0, x.size(1)).unsqueeze(1)
-
-        # dim.shape = (d_model)
-        dim = torch.arange(0, d_model, step=2)
-
-        # Sine for even positions, cosine for odd dimensions
-        result[:, 0::2] = torch.sin(pos / (10_000 ** (dim / d_model)))
-        result[:, 1::2] = torch.cos(pos / (10_000 ** (dim / d_model)))
-        return result.to(x.device)
-
-
-def Spatial_encoding(x, d_model):
-
-        result = torch.zeros_like(x, requires_grad=False)
-
-        # pos.shape = (seq_len, 1)
-        pos = torch.arange(0, x.size(2)).unsqueeze(1).unsqueeze(0).unsqueeze(0).repeat(x.size(0),x.size(1), 1,1)
-
-        # dim.shape = (d_model)
-        dim = torch.arange(0, d_model, step=2)
-
-        # Sine for even positions, cosine for odd dimensions
-        result[:,:,:, 0::2] = torch.sin(pos / (10_000 ** (dim / d_model)))
-        result[:,:,:, 1::2] = torch.cos(pos / (10_000 ** (dim / d_model)))
-        return result.to(x.device)
+from models.modules import *
+# from utilz.utils import target_mask , create_src_mask
 
 class FFGAT(nn.Module):
     def __init__(self, args):
@@ -103,8 +49,6 @@ class Classifier(nn.Module):
         self.conv1 = nn.Conv1d(17,  17, 7, 2, 3)
         self.conv2 = nn.Conv1d(8,  17, 7, 2, 3)
         self.conv3 = nn.Conv1d(6,  17, 7, 2, 3)
-        # self.conv4 = nn.Conv1d(3, 17, 7,2, 3)
-        # self.conv4 = nn.MaxPool2d((1,8), stride=(1,4))
         self.out = nn.Linear(hidden_size//2, hidden_size//2)
         self.LN = nn.LayerNorm(hidden_size)
         self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))
@@ -125,7 +69,7 @@ class Classifier(nn.Module):
 class deepFF(nn.Module):
     def __init__(self, input_size, output_size, n_heads):
         super(deepFF, self).__init__()
-        self.GAT1 = GraphAttentionV2Layer(in_features=input_size, out_features=output_size, n_heads=n_heads, n_nodes=32,
+        self.GAT1 = DAAG_Layer(in_features=input_size, out_features=output_size, n_heads=n_heads, n_nodes=32,
                     concat=True)
         self.hidden_size = output_size
         
@@ -276,7 +220,6 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.hidden_size = hidden_size
         self.InitEmbed = TrfEmb(self.hidden_size, num_heads)
-        # self.deepFF = deepFF(self.hidden_size, self.hidden_size)
 
     def forward(self, scene, adj,src_mask, B, SL, Nnodes, trgt_mask):
         h = scene
@@ -284,7 +227,6 @@ class Encoder(nn.Module):
         adj_zero = torch.ones_like(adj[:,0]).unsqueeze(1)
         adj_mat = torch.cat((adj_zero, adj, adj_zero), dim=1)
         h = self.InitEmbed(h, src_mask, adj_mat, trgt_mask)
-
         return h
     
 class Decoder(nn.Module):
@@ -293,7 +235,6 @@ class Decoder(nn.Module):
         self.hidden_size = hidden_size
         self.TargetEmb = TargetEmb(self.hidden_size, num_heads)
         self.AttAll = nn.MultiheadAttention(embed_dim= hidden_size, num_heads=num_heads, batch_first=True)
-        # self.TrgtLN = nn.LayerNorm(self.hidden_size)
         self.ReZeroTrgt = nn.Parameter(torch.zeros(self.hidden_size))
         self.FF = FeedForwardNetwork(d_model=hidden_size, out_dim=hidden_size)
         self.ReZeroFF = nn.Parameter(torch.zeros(self.hidden_size))

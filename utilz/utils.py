@@ -464,23 +464,6 @@ def Zone_compare(Pred, Target, PrevZone, BB):
     return count, totallen, B*Nnodes, nonzero, doublezone
 
 
-def target_mask(trgt, num_head = 0, device="cuda:3"):
-    B, SL, Nnodes, _= trgt.size()
-    mask = 1- torch.triu(torch.ones(SL, SL, device=trgt.device), diagonal=1)# Upper triangular matrix
-    return mask == 0
-
-def target_mask0(trgt, num_head, device="cuda:3"):
-    B, SL, Nnodes, _= trgt.size()
-    mask = 1- torch.triu(torch.ones(SL, SL, device=trgt.device), diagonal=1).unsqueeze(0).unsqueeze(0)  # Upper triangular matrix
-    mask = mask.unsqueeze(4) * (trgt[:,:,:,1] != 0).unsqueeze(1).unsqueeze(3)
-    if num_head > 1:
-        mask = mask.repeat_interleave(num_head,dim=0)
-    return mask == 0
-
-def create_src_mask(src, device="cuda:3"):
-    mask = src[:,:,:, 1] == 0
-    return mask
-
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 

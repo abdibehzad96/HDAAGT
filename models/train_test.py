@@ -5,7 +5,7 @@ import os
 from utilz.utils import *
 import torch.nn.functional as F
 import time
-from models.GGAT import greedy
+from models.HGAAGT import greedy
 
 def train_model(model, optimizer, criterion, train_loader, test_loader, clip, args, datamax, datamin, ZoneConf):
     ct = args.ct

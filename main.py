@@ -12,7 +12,7 @@ import math
 from torch.nn.parallel import DataParallel
 from utilz.utils import *
 from models.train_test import *
-from models.GGAT import *
+from models.HGAAGT import *
 
 class args:
     def __init__(self):

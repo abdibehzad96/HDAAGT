@@ -9,12 +9,12 @@ from shapely.geometry import Point, Polygon
 import re
 
 # Architecture Multi layer GATS concatenated at the end
-from models.GraphAttention import *
-from models.Transformer import *
+from models.modules import *
+from misc.not_used.Transformer import *
 from models.minGRU import *
 
 
-from models.Transformer import Decoder
+from misc.not_used.Transformer import Decoder
 
 
 
