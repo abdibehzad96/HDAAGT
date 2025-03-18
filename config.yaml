@@ -1,0 +1,51 @@
+# The configuration parameters below are used for HDAAGT model training and evaluation.
+model_name: "HDAAGT"
+
+# Model Architecture parameters
+hidden_size: 512
+n_heads: 4
+Nusers: 32
+Nnodes: 32
+NZones: 10
+NTrfL: 4
+concat: False
+
+# Dataset parameters
+sl: 30
+future: 30
+sw: 2
+sn: 10
+Centre: [512,512]
+dssc: 2
+dstar: 2
+
+
+# Training parameters
+learning_rate: 4e-4
+schd_stepzise: 25
+gamma: 0.15
+epochs: 350
+patience_limit: 50
+clip: 0.25
+batch_size: 32
+
+
+Headers: ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
+Columns_to_keep: [11,2,3,7,8,9,10] #['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
+xyid: [1, 2] # the index of x and y  of the Columns_to_Keep used for speed calculation function
+Columns_to_Predict: [0,1] #['BBx', 'BBy'] The columns we expect to predict
+TrfL_Columns: [7,8,9,10]
+
+
+sos: [10,1016,1016,7,7,7,7] # , torch.zeros(17))).repeat(1,1,32, 1).to(device)
+eos: [11,1020,1020,8,8,8,8] #), torch.zeros(17))).repeat(1,1,32, 1).to(device)
+csvpath :'/home/abdikhab/New_Idea_Traj_Pred/RawData/TrfZonXYCam.csv'
+Zoneconf_path :'/home/abdikhab/New_Idea_Traj_Pred/utilz/ZoneConf.yaml'
+generate_data: false #  Add class by loading the CSV file
+Train: true # It's for training the model with the prepared data
+test_in_epoch: True # It's for testing the model in each epoch
+model_from_scratch: True # It's for creating model from scratch
+only_test: False # It's for testing the model only
+
+
+

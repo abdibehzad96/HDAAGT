@@ -14,70 +14,22 @@ from utilz.utils import *
 from models.train_test import *
 from models.HGAAGT import *
 
-class args:
-    def __init__(self):
-        self.arg = {}
-    def add_argument(self, name, type, value, help):
-        if name.startswith('--'):
-            name = name[2:]
-        self.arg[name] = {
-            'value': value,
-            'type': type,
-            'help': help
-        }
-    def get(self, name):
-        return self.arg[name]['value']
-    def help(self, name):
-        print(name, self.arg[name]['help'])
-        return self.arg[name]['help']
-
-
 if __name__ == '__main__':
     # Load the data
     cwd = os.getcwd()
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
     device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
-    # # Hyperparameters
-    hidden_size, num_layersGAT, num_layersGRU, expansion,  n_heads = 128, 1, 6, 2, 4
-
-    learning_rate, schd_stepzise, gamma, epochs, batch_size, patience_limit, clip= 4e-4, 25, 0.15, 350, 8, 50, 0.25
-
-    Headers = ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
-    Columns_to_keep = [11,2,3,7,8,9,10] #['BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
-    #  ['Vx', 'Vy', 'heading',xc,yc, Rc,Rc, SinX,CosX,SinY,CosY, Sin2X,Cos2X, Sin2Y, Cos2Y, Sin3X, Cos3X, Sin3Y, Cos3Y, Sin4X, Cos4X, Sin4Y, Cos4Y]
-    Columns_to_Predict = [0,1] #['BBx', 'BBy','Xreal', 'Yreal','Vx', 'Vy']
-    xyid = [1, 2] # the index of x and y  of the Columns_to_Keep in the columns for speed calculation
-    TrfL_Columns = [7,8,9,10]
-    NFeatures = len(Columns_to_keep)
-    input_size = NFeatures +9 + 8
-    output_size = len(Columns_to_Predict)
-    Nusers, NZones = 32, 10
-    Nnodes, NTrfL, sl, future, sw, sn  = Nusers, 4, 30, 30, 2, 10
-    Centre = [512,512]
-    dssc, dstar = 2,2
-    sos = torch.cat((torch.tensor([10,1016,1016,7,7,7,7]), torch.zeros(17))).repeat(1,1,32, 1).to(device)
-    eos = torch.cat((torch.tensor([11,1020,1020,8,8,8,8]), torch.zeros(17))).repeat(1,1,32, 1).to(device)
-    # sos_target = torch.cat((torch.tensor([1,1]), torch.zeros(17))).repeat(1,1,32, 1).to(device)
-
-    generate_data = False #  Add class by loading the CSV file
-    # generate_data = True #  Add class by loading the CSV file
-    loadData = not generate_data      # load the class from the saved file
-    Train = True # It's for training the model with the prepared data
-    test_in_epoch = True # It's for testing the model in each epoch
-    model_from_scratch = True # It's for creating model from scratch
-    load_the_model = not model_from_scratch # It's for loading model
-    Seed = loadData # If true, it will use the predefined seed to load the indices
-    only_test = False # It's for testing the model only
-    concat = False
-    
-    csvpath ='/home/abdikhab/New_Idea_Traj_Pred/RawData/TrfZonXYCam.csv'
-    Zoneconf_path ='/home/abdikhab/New_Idea_Traj_Pred/utilz/ZoneConf.yaml'
     dataset_path = os.path.join(cwd, 'Pickled')
     ct = datetime.datetime.now().strftime("%m-%d-%H-%M")
     print(f"Total  # of GPUs {torch.cuda.device_count()}")
     # spread the model to multiple GPUs
     print(f"Using {device} device")
     
+    NFeatures: len(Columns_to_keep)
+    input_size: NFeatures + 9 + 8
+    output_size = len(Columns_to_Predict)
+    loadData: not generate_data
+    load_the_model = not model_from_scratch
+    Seed = loadData
 
     # Use argparse to get the parameters
     parser = argparse.ArgumentParser(description='Trajectory Prediction')
