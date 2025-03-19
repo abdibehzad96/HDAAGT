@@ -4,72 +4,64 @@ import csv
 import datetime
 import os
 import random
-import math
 import torch
 import pandas as pd
-import numpy as np
 import yaml
 import re
 from shapely.geometry import Point, Polygon
 
 class Scenes(Dataset):
-    def __init__(self, args,trORtst): # Features include ['BBX','BBY','W', 'L' , 'Cls', 'Xreal', 'Yreal']
-        self.Nnodes = args.Nnodes
-        self.NFeatures = args.Nfeatures # initial number of features which the Vx, Vy and heading are added
-        self.input_size = args.input_size # fullscene shape
-        self.NZones = args.NZones
-        self.sl = args.sl
-        self.shift = args.sw
-        self.sw = args.sw
-        self.sn = args.sn
-        self.future = args.future
-        self.device = args.device
+    def __init__(self, config): 
+        self.Nnodes = config['Nnodes']
+        self.NFeatures = config['NFeatures'] # initial number of features which the Vx, Vy and heading are added
+        self.input_size = config['input_size'] # fullscene shape
+        self.NZones = config['NZones']
+        self.sl = config['sl']
+        self.shift = config['sw']
+        self.sw = config['sw']
+        self.sn = config['sn']
+        self.future = config['future']
+        self.device = config['device']
         self.framelen = 2*self.sl # number of frames used for training
-        self.prohibitedZones = [200, 100] # These are the zones that are not allowed to be in the scene
-        self.xyidx = args.xyidx
+        self.prohibitedZones = [200, 100] # These are the zones that are not allowed to be in the scene, such as parking lots and sidewalks, etc. This zones will be ignored
+        self.xyidx = config['xy_indx']
+        self.Centre = config['Centre']
         self.eyemat = torch.eye(self.Nnodes, self.Nnodes, device=self.device)
         self.epsilon = -1e-16
-        self.trORtst = trORtst
-        self.Scene = torch.empty(0, self.sl, self.Nnodes, self.input_size, dtype=torch.long, device=self.device) #[Sampeles, Sequence Length, Nnodes (30), NFeatures(tba)]
-        self.ID = [] #torch.empty(0, sl+future, Nnodes, device=device)
-        self.Fr = [] #torch.empty(0, sl+future, device=device)
-        self.Zones = [] #torch.empty(0, sl+future, Nnodes, device=device)
-        self.NUsers = [] # torch.empty(0, device=self.device)
-        self.Adj_Mat_Scene = torch.empty(0, self.sl, self.Nnodes, self.Nnodes, device=self.device)
-        # self.Edge_Index = []
-        self.Target = torch.empty(0, self.future, self.Nnodes, self.input_size, device=self.device, dtype= torch.long) #[Sampeles, Sequence Length, Nnodes (30), NFeatures(tba)]
-        self.Adj_Mat_Target = torch.empty(0, self.future, self.Nnodes, self.Nnodes, device=self.device)
-        self.Centre = args.Centre
-        self.maxval = torch.zeros(self.input_size, device=self.device)
-        self.minval = torch.zeros(self.input_size, device=self.device)
+        self.ID = [] # We keep the track of the object IDs
+        self.Fr = [] # Same as ID but for the frame number
+        self.Zones = []
+        self.NUsers = [] # Number of users in each scene, this helps decreasing the preprocessings
+        self.Scene = torch.empty(0, self.sl, self.Nnodes, self.input_size, dtype=torch.long, device=self.device) #[Sampeles, Sequence Length, Nnodes, NFeatures], Scene is the input to the model
+        self.Adj_Mat_Scene = torch.empty(0, self.sl, self.Nnodes, self.Nnodes, device=self.device) #[Sampeles, Sequence Length, Nnodes, Nnodes], Adjacency matrix for the Scene
+        self.Target = torch.empty(0, self.future, self.Nnodes, self.input_size, device=self.device, dtype= torch.long) #[Sampeles, Sequence Length, Nnodes, NFeatures], Target is the output of the model
 
 
     def addnew(self, Scene, Target, Zones, ID, Fr, NObjs):
         self.Scene = torch.cat((self.Scene, Scene.unsqueeze(0)), dim=0)
         self.Adj_Mat_Scene = torch.cat((self.Adj_Mat_Scene, self.Adjacency(Scene, Zones[:self.sl], NObjs).unsqueeze(0)), dim=0)
-        self.Zones.append(Zones) # = torch.cat((self.Zones, Zones), dim=0)
-        self.ID.append(ID) #= torch.cat((self.ID, ID), dim=0)
-        self.Fr.append(Fr) #= torch.cat((self.Fr, Fr), dim=0)
-        self.NUsers.append(NObjs) #= torch.cat((self.NUsers, torch.tensor(NObjs, device=self.device).unsqueeze(0)), dim=0)
+        self.Zones.append(Zones) 
+        self.ID.append(ID)
+        self.Fr.append(Fr)
+        self.NUsers.append(NObjs)
         self.Target = torch.cat((self.Target, Target.unsqueeze(0)), dim=0)
-        # self.Adj_Mat_Target = torch.cat((self.Adj_Mat_Target, self.Adjacency(Target,Zones[self.sl:], NObjs).unsqueeze(0)), dim=0)
         
-    def Concat(self, fullscene, Zones, IDs, Fr, NObjs, trORtst):
-        fullscene= self.speedcalc(fullscene)
+    def Slide_(self, fullscene, Zones, IDs, Fr, NObjs): # Concatenate the 
+        fullscene= self.ExtractFeatures(fullscene) # Extract more features from the fullscene
         for j in range(0, self.sn*self.sw, self.sw):
             final_indx = j + self.sl + self.future
             start_indx = j + self.sl
             scene = fullscene[j : j+ self.sl]
-            ct = (scene[:,:,self.xyidx[0]] == 0).sum(dim=0) # count the number of zeros in the x direction
-            ct = (ct < 10).view(1, self.Nnodes, 1) # if the number of zeros in the x direction is more than 10, we ignore the scene
-            target = fullscene[start_indx : final_indx] * ct
-            scene = scene* ct
+            no_show_frames = (scene[:,:,self.xyidx[0]] == 0).sum(dim=0) # The number of zeros in the x direction, which means they are out of camera sight
+            no_show_frames = (no_show_frames < self.sl//2).view(1, self.Nnodes, 1) # At least the vehicle must be half of the sequence, unless we ignore the scene
+            target = fullscene[start_indx : final_indx] * no_show_frames
+            scene = scene* no_show_frames
             self.addnew(scene, target, 
                         Zones[j : final_indx], IDs[j:final_indx],
                         Fr[j:final_indx], NObjs)
         
 
-    def augmentation(self, num): # it works with displacing the order of the users in the scene 
+    def augmentation(self, num): # it works with permuting the order of the users in the scene  "num" times
         len = self.Scene.size(0)
         extenstion = torch.arange(self.NUsers, self.Nnodes, device=self.device)
         for i in range(num):
@@ -84,7 +76,7 @@ class Scenes(Dataset):
                 newtarget = newtarget[:,order]
                 self.addnew(newscene, newtarget, zones, [], self.Fr[n], self.NUsers[n])
         
-    def addnoise(self, multiply, mx, ratio):
+    def addnoise(self, multiply, mx, ratio): # this adds noise "multiply" times to the scene and the target, it works by mx amplitude and probability of ratio
         ss = self.Scene.size()
         ts = self.Target.size()
         init_scene = self.Scene.clone()
@@ -111,18 +103,17 @@ class Scenes(Dataset):
 
 
 
-    def speedcalc(self, fullscene):
+    def ExtractFeatures(self, fullscene):
         x,y = fullscene[:, :, self.xyidx[0]].unsqueeze(2), fullscene[:, :, self.xyidx[1]].unsqueeze(2)
         dx = torch.diff(x, n=1, append=x[-1:,:], dim = 0)
         dy = torch.diff(y, n=1, append=y[-1:,:], dim = 0)
-        flg = y!=0
+        flg = y!=0 # In most cases, all Nodes are not filled with agents, so we must ignore them
         xc = ((x - self.Centre[0])/self.Centre[0])*flg
         yc = ((y - self.Centre[1])/self.Centre[1])*flg
         xc2 = xc**2
         yc2 = yc**2
         Rc = torch.sqrt(xc**2 + yc**2)*flg
         Rc2 = Rc**2
-        # Rcinv = torch.nan_to_num(1/Rc, nan=0) * (y!=0)
         heading = torch.atan2(xc, yc)*flg
         SinX = torch.sin(xc)*flg
         CosY = torch.cos(yc)*flg
@@ -132,32 +123,13 @@ class Scenes(Dataset):
         Cos2X = torch.cos(2*xc)*flg
         Sin2Y = torch.sin(2*yc)*flg
         Cos2Y = torch.cos(2*yc)*flg
-
-
         fullscene = torch.cat((fullscene, dx, dy, heading, xc,yc, Rc, xc2, yc2, Rc2,
                                 SinX, CosX, SinY, CosY,
                                 Sin2X, Cos2X, Sin2Y, Cos2Y), dim=2)
-        max,_ = fullscene.max(0)
-        max, _ = max.max(0)
-        min, _ = fullscene.min(0)
-        min, _ = min.min(0)
-        self.maxval = (self.maxval >= max)* self.maxval + (self.maxval < max)* max # find the maximum value in each feature to normalize the data
-        self.minval = (self.minval <= min)* self.minval + (self.minval > min)* min # find the minimum value in each feature to normalize the data
         return fullscene
 
 
-    def intention(self, dx, dy, heading):
-        Intention = torch.zeros_like(dx)
-        for i in range(dx.size(0)):
-            for j in range(dx.size(1)):
-                if heading[i,j] > 0.5 and heading[i,j] < 1.5:
-                    Intention[i,j] = 1
-                elif heading[i,j] > -1.5 and heading[i,j] < -0.5:
-                    Intention[i,j] = 2
-        return Intention
-    def Adjacency(self, Scene, Zone, NObjs): # Features include ['W', 'L' , 'Cls', 'Xreal', 'Yreal']
-        # Distance matrix
-        Zone = torch.stack(Zone, dim=0)
+    def Adjacency(self, Scene, Zone, NObjs): # Create the adjacency matrix for the Scene agents, the values are the normalized inverse of the distance between the agents
         Adj_mat = torch.zeros(Scene.size(0), self.Nnodes, self.Nnodes, device=self.device) + self.epsilon
         Kmat0 = ((Zone[:, :NObjs]!=200) & (Zone[:, :NObjs]!=100)).float()
         Kmat = torch.mul(Kmat0.unsqueeze(2), Kmat0.unsqueeze(1))
@@ -166,34 +138,20 @@ class Scenes(Dataset):
         Invsqr_dist = torch.sum((diff/1024)**2, dim=3).sqrt()
         Invsqr_dist = torch.exp(-Invsqr_dist)
         Adj_mat[:, :NObjs, :NObjs] = torch.mul(Invsqr_dist, Kmat)
-        # Kmat = torch.mul(Kmat0, Zone[:,:NObjs] + self.Zoneindx) # Here we extend the Adj_mat to include the zones and connect Users to the zones
-        # for k in range(NObjs):
-        #     mask = Kmat[:, k] != 0 # Ignore the zones that are not in the scene over the frames( Sequence length)
-        #     columns = Kmat[mask, k].int()
-        #     rows = torch.nonzero(mask) # find the indices of the zones that are in the scene
-        #     Adj_mat[rows, k , columns] = 1
         return Adj_mat
-    
-    def saturation(self, mat, maxval):
-        mat = torch.relu(maxval - mat)
-        mat = torch.relu(maxval - mat)
-        return mat
 
-    def load_class(self, path, cmnt ):
-        self.Scene = torch.load(os.path.join(path, cmnt, 'Scene.pt')).to(self.device) #, weights_only=True)
-        self.Zones = torch.load(os.path.join(path, cmnt, 'Zones.pt'))#, weights_only=True)
-        self.ID = torch.load(os.path.join(path, cmnt, 'ID.pt'))#, weights_only=True)
-        self.Fr = torch.load(os.path.join(path, cmnt, 'Fr.pt'))#, weights_only=True)
-        self.Adj_Mat_Scene = torch.load(os.path.join(path, cmnt, 'Adj_Mat_Scene.pt')).to(self.device)#, weights_only=True).to(self.device)
-        self.NUsers = torch.load(os.path.join(path, cmnt, 'NUsers.pt')) #, weights_only=True)
-        self.Target = torch.load(os.path.join(path, cmnt, 'Target.pt')).to(self.device) #, weights_only=True)
-        self.Adj_Mat_Target = torch.load(os.path.join(path, cmnt, 'Adj_Mat_Target.pt')).to(self.device) #, weights_only=True).to(self.device)
-        if self.trORtst == 0:
-            self.maxval = torch.load(os.path.join(path, cmnt, 'maxval.pt')).to(self.device)
-            self.minval = torch.load(os.path.join(path, cmnt, 'minval.pt')).to(self.device)
+
+    def load_class(self, path, cmnt): # It usually takes time preparing the dataset, so it's better to save it and load it later
+        self.Scene = torch.load(os.path.join(path, cmnt, 'Scene.pt'), weights_only=True).to(self.device)
+        self.Zones = torch.load(os.path.join(path, cmnt, 'Zones.pt'), weights_only=True)
+        self.ID = torch.load(os.path.join(path, cmnt, 'ID.pt'), weights_only=True)
+        self.Fr = torch.load(os.path.join(path, cmnt, 'Fr.pt'), weights_only=True)
+        self.Adj_Mat_Scene = torch.load(os.path.join(path, cmnt, 'Adj_Mat_Scene.pt'), weights_only=True).to(self.device)
+        self.NUsers = torch.load(os.path.join(path, cmnt, 'NUsers.pt'), weights_only=True)
+        self.Target = torch.load(os.path.join(path, cmnt, 'Target.pt'), weights_only=True)
 
     def save_class(self, path, cmnt):
-        if not os.path.exists(os.path.join(path, cmnt)):
+        if not os.path.exists(os.path.join(path, cmnt)): # Create the directory if it doesn't exist
             os.makedirs(os.path.join(path, cmnt))
         else:
             #remove the existing files
@@ -205,146 +163,102 @@ class Scenes(Dataset):
         torch.save(self.Fr, os.path.join(path, cmnt, 'Fr.pt'))
         torch.save(self.Adj_Mat_Scene, os.path.join(path, cmnt, 'Adj_Mat_Scene.pt'))
         torch.save(self.NUsers, os.path.join(path, cmnt, 'NUsers.pt'))
-        torch.save(self.Target, os.path.join(path, cmnt,  f'Target.pt'))
-        torch.save(self.Adj_Mat_Target, os.path.join(path, cmnt, 'Adj_Mat_Target.pt'))
-        if self.trORtst == 0:
-            torch.save(self.maxval, os.path.join(path, cmnt, 'maxval.pt'))
-            torch.save(self.minval, os.path.join(path, cmnt, 'minval.pt'))
+        torch.save(self.Target, os.path.join(path, cmnt,  'Target.pt'))
 
     def __len__(self):
         return self.Scene.size(0)
     
     def __getitem__(self, idx):
-        return self.Scene[idx], self.Target[idx], self.Adj_Mat_Scene[idx] #, self.Adj_Mat_Target[idx]
+        return self.Scene[idx], self.Target[idx], self.Adj_Mat_Scene[idx] #, self.Adj_Mat_Target[idx] , self.ID[idx], self.Fr[idx], self.Zones[idx]
     
     
 
-
-# Headers = ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
-def def_class(Scenetr, Scenetst, Sceneval, Dframe, args): # Nnodes, NFeatures, sl, future, sw, sn, Columns_to_keep, seed, ct, only_test, device):
-    Nnodes = args.Nnodes
-    NFeatures = args.Nfeatures
-    NZones = args.NZones
-    sl = args.sl
-    future = args.future
-    shift = args.sw
-    sw = args.sw
-    sn = args.sn
-    Columns_to_keep = args.Columns_to_keep
-    TrfL_Columns = args.TrfL_Columns
-    NTrfL = len(TrfL_Columns)
-    Seed = args.Seed
-    ct = args.ct
-    only_test = args.only_test
-    device = args.device
-    Nusers = args.Nusers
+def Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config): # Nnodes, NFeatures, sl, future, sw, sn, Columns_to_keep, seed, ct, only_test, device):
+    Nnodes = config['Nnodes']
+    NFeatures = config['NFeatures']
+    sl = config['sl']
+    future = config['future']
+    sw = config['sw']
+    sn = config['sn']
+    Columns_to_keep = config['Columns_to_keep']
+    Seed = not config['generate_data']
+    ct = config['ct']
+    only_test = config['only_test']
+    device = config['device']
+    Nusers = config['Nusers']
     
-    scenelet_len = sl + future + sn*sw # number of frames in a scenelet
-    scenelets = int((max(Dframe['Frame']) - min(Dframe['Frame']) + 1) // scenelet_len)
+    scenelet_len = sl + future + sn*sw # Maximum number of frames in a scenelet
+    scenelets = int((max(Traffic_data['Frame']) - min(Traffic_data['Frame']) + 1) // scenelet_len)
     train_size = int(0.9 * scenelets)
     test_size = int(0.1 * scenelets)
     val_size = scenelets - train_size - test_size
     savelog(f"Train size: {train_size}, Test size: {test_size}, Validation size: {val_size} ", ct)
-
-
     if Seed:
         savelog("Using seed for random split", ct)
         indices = torch.load(os.path.join(os.getcwd(),'Pickled',f'indices.pt'))
     else:
         savelog("Randomly splitting the data", ct)
-        indices = list(range(scenelets))
-        random.shuffle(indices)
+        indices = torch.randperm(scenelets) # To avoid data leakage, seed selects between the scenelet_len frames, so sliding window does not affect it
         
 
-    Dframe = torch.tensor(Dframe.values, dtype=torch.float, device=device)
-    DFindx, DFindxtmp = 0, 0
+    Traffic_data = torch.tensor(Traffic_data.values, dtype=torch.float, device=device)
+    DFindx, DFindxtmp = 0, 0 # We sweep through the first frame to the last frame
     IDs = []
     Zones = []
     Fr = []
-    Scene = torch.empty(0, Nnodes, NFeatures, device=device)
-    TrfL_Extender = torch.zeros(NFeatures - NTrfL, device=device)
-    for fr in range(int(min(Dframe[:,0])), int(max(Dframe[:,0]))):
+    Scene = []
+    for fr in range(int(min(Traffic_data[:,0])), int(max(Traffic_data[:,0]))):
         DFindxtmp = DFindx
-        rows = torch.empty(0, NFeatures, device=device) # Nnodes and NFeatures are predefined fixed values, here is 30
-        while Dframe[DFindx,0] == fr:
+        rows = torch.empty(0, NFeatures, device=device) # Nnodes and NFeatures are predefined fixed values
+        while Traffic_data[DFindx,0] == fr:
             DFindx += 1
 
-        rows = Dframe[DFindxtmp:DFindx, Columns_to_keep] # We only keep the columns that we need, for now Tr1, Tr2, Tr3, Tr4 are not used
-        Fr.append(fr) # = torch.cat((Fr, fr), dim=0) # We keep the track of the frame number
-        IDs.append(Dframe[DFindxtmp:DFindx, 1])
-        Zones.append(Dframe[DFindxtmp:DFindx, 11])
-        TrfL = torch.cat((Dframe[DFindx, TrfL_Columns], TrfL_Extender), dim=0)
-        while rows.size()[0] < Nusers:
-            rows = torch.cat((rows, torch.zeros(1, NFeatures, device=device)), dim=0) # this is to make sure that the number of nodes is always Nnodes
-        # for _ in range(NZones): # Traffic light states are a feature of the zones
-        #     rows = torch.cat((rows, TrfL.unsqueeze(0)), dim=0)
-            
-        Scene = torch.cat((Scene, rows.unsqueeze(0)), dim=0) # One full scenelet after each scenelet_len frames
+        rows = Traffic_data[DFindxtmp:DFindx, Columns_to_keep] # We only keep the columns that we need
+        Fr.append(fr)  # We keep the track of the frame number
+        IDs.append(Traffic_data[DFindxtmp:DFindx, 1])
+        Zones.append(Traffic_data[DFindxtmp:DFindx, 11])
+        while rows.size()[0] < Nusers:  # This is to make sure that rows is [Nnodes, NFeatures]
+            rows = torch.cat((rows, torch.zeros(1, NFeatures, device=device)), dim=0)
 
-        if Scene.size(0) % scenelet_len == 0: # This only happens after each scenelet_len frames
-            trORtst = checktstvstr(fr, indices, scenelet_len, train_size, test_size) # train, test, or validation
-            # Scene, Zones, IDs = ConsistensyCheck2(Scene, Zones, IDs, Nnodes, NFeatures)
-            Scene, Zones, IDs, NObjs = ConsistensyCheck2(Scene, Zones, IDs, Nnodes, NFeatures, Nusers)
+        Scene.append(rows)
+        if len(Scene) % scenelet_len == 0: # This only happens after each scenelet_len frames
+            trORtst = checktstvstr(fr, indices, scenelet_len, train_size, test_size) # Find if the Scene belongs to train, test, or validation
+            Scene = torch.stack(Scene, dim=0).to(device=device)
+            Scene, Zones, IDs, NObjs = ConsistensyCheck(Scene, Zones, IDs, Nnodes, NFeatures) # Now we sort the agents to be on the same row in the whole Scene
             if trORtst == 1: # test
-                # .Concat(Scene, Zones, IDs, Fr, sn, sw, sl, framelen)
-                Scenetst.Concat(Scene, Zones, IDs, Fr, NObjs, trORtst)
+                Scenetst.Slide_(Scene, Zones, IDs, Fr, NObjs)
             if not only_test: # 
                 if trORtst == 0:
-                    Scenetr.Concat(Scene, Zones, IDs, Fr, NObjs,trORtst)
+                    Scenetr.Slide_(Scene, Zones, IDs, Fr, NObjs)
                 elif trORtst == 2:
-                    Sceneval.Concat(Scene, Zones, IDs, Fr, NObjs,trORtst)
-            Scene = torch.empty(0, Nnodes, NFeatures, device=device)
-            Fr = [] #torch.empty(0, device=device)
+                    Sceneval.Slide_(Scene, Zones, IDs, Fr, NObjs)
+            Scene = []
+            Fr = []
             IDs = []
             Zones = []
     torch.save(indices, os.path.join(os.getcwd(),'Pickled',f'indices.pt'))
-    return Scenetr, Scenetst, Sceneval, Scenetr.maxval, Scenetr.minval
+    return Scenetr, Scenetst, Sceneval
 
-
-def givindx(globlist, id):
-    for i in range(len(globlist)):
-        if globlist[i] == id:
-            return i
-    return None
-
-
-def ConsistensyCheck2(Scene, Zones, IDs, Nnodes, NFeatures, Nusers): # Makes sure that the rows related to the same ID are in the same order in all the lists
-    globlist = IDs[0] # Base list to compare the rest of the lists
-    k = 0
+def ConsistensyCheck(Scene, Zones, IDs, Nnodes, NFeatures): # Makes sure that the rows related to the same ID are in the same order in the  whole lists
+    globlist = torch.cat(IDs, dim=0).unique() # Base list to compare the rest of the lists
+    len_globlist = max(len(globlist), Nnodes)
     device = Scene.device
-    SortedScene = torch.empty(0, Nnodes, NFeatures, device=device)
+    SortedScene = []
     SortedZones = []
     SortedIDs = []
 
-    for ids in IDs[1:]: # We create a global list of all the IDs in the order they appear
-        for id in ids:
-            if id not in globlist:
-                globlist= torch.cat((globlist,id.unsqueeze(0)), dim=0)
-
-    for ids in IDs:
-        Sc = torch.zeros(Nnodes, NFeatures, device=device)
-        indxlist = torch.zeros(Nusers, device=device)
-        Zonelist = 200*torch.ones(Nusers, device=device)
-        for n , id in enumerate(ids): # We sweep through the idtmp list and compare it with the next frame's id list
-            indx = givindx(globlist, id)
-            if indx is None:
-                print("Error in ConsistensyCheck2: indx is None")
-            try:
-                indxlist[indx] = id
-                flg = 1
-            except:
-                print(f"Error in ConsistensyCheck2: Indx {indx} is out of range")
-                flg = 0
-            if flg:
-                Sc[indx] = Scene[k, n] 
-                Zonelist[indx] = Zones[k][n]
-
-        SortedIDs.append(indxlist) # Sort the IDs based on the indxlist
-        SortedZones.append(Zonelist) # Sort the Zones based on the indxlist
-        SortedScene = torch.cat((SortedScene, Sc.unsqueeze(0)), dim=0)
-        k += 1
-    NObjs = len(globlist) if len(globlist) < Nusers else Nusers
-    return SortedScene, SortedZones, SortedIDs, NObjs
+    for k, ids in enumerate(IDs): # IDs are spread over the frames, we need to sort them frame by frame
+        Sc = torch.zeros(len_globlist, NFeatures, device=device) # tmp Scene which will be sorted
+        Zonelist = 200*torch.ones(len_globlist, device=device) # Zone 200 is the default zone that meant to be ignored
+        _, indices = torch.where(ids.unsqueeze(1)==globlist) 
+        Sc[indices] = Scene[k, :len(indices)] # Swap the rows based on the indices
+        Zonelist[indices] = Zones[k] # Swap the zones based on the indices
+        SortedZones.append(Zonelist[:Nnodes]) # Sort the Zones based on the indxlist
+        SortedScene.append(Sc[:Nnodes]) # We dump the rest of the agents that are over Nnodes
+    SortedIDs = globlist.repeat(k, 1) # Sort the IDs based on the indxlist
+    SortedScene = torch.stack(SortedScene, dim= 0).to(device=device)
+    SortedZones = torch.stack(SortedZones, dim=0).to(device=device)
+    return SortedScene, SortedZones, SortedIDs, len(globlist)
 
 
 
@@ -359,7 +273,7 @@ def checktstvstr(fr, indices, scenelet_len, train_size, test_size):
     else:
         return 2 # validation
 
-def prep_data(datasettr, datasettst, datasetval, batch_size):
+def DataLoader_Scene(datasettr, datasettst, datasetval, batch_size):
     train_loader = DataLoader(datasettr, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(datasettst, batch_size=batch_size, shuffle=False)
     val_loader = DataLoader(datasetval, batch_size=batch_size, shuffle=False)
@@ -409,7 +323,7 @@ def savelog(log, ct): # append the log to the existing log file while keeping th
         file.write('\n' + log)
         file.close()
 
-def Zoneconf(path = '/home/abdikhab/New_Idea_Traj_Pred/utilz/ZoneConf.yaml'):
+def Zoneconf(path = '/utilz/ZoneConf.yaml'):
     ZoneConf = []
     with open(path) as file:
         ZonesYML = yaml.load(file, Loader=yaml.FullLoader)

@@ -64,7 +64,7 @@ if loadData:
     Sceneval.load_class(dataset_path)
 else:
     df = loadcsv(csvpath, Headers)
-    Scenetr, Scenetst, Sceneval = def_class(Scenetr, Scenetst, Sceneval, df, args)
+    Scenetr, Scenetst, Sceneval = Scene_Process(Scenetr, Scenetst, Sceneval, df, args)
     Scenetr.save_class(dataset_path)
     Scenetst.save_class(dataset_path)
     Sceneval.save_class(dataset_path)

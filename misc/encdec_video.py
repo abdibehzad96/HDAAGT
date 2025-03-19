@@ -108,7 +108,7 @@ model.to(device)
 optimizer = optim.Adam(model.parameters(), lr=learning_rate )
 
 df = loadcsv(csvpath)
-dataset= def_class(df, sw, sl, shift, future, input_size, output_size, tr2img= True, ct= ct, imgsize=1024, Dsample = 4, normalize = False, device = device)
+dataset= Scene_Process(df, sw, sl, shift, future, input_size, output_size, tr2img= True, ct= ct, imgsize=1024, Dsample = 4, normalize = False, device = device)
 train_loader, test_loader, val_loader = prep_data(dataset, batch_size, ct, seed = True) #seed must always be true
 
 
