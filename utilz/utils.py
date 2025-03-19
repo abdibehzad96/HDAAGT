@@ -26,6 +26,7 @@ class Scenes(Dataset):
         self.prohibitedZones = [200, 100] # These are the zones that are not allowed to be in the scene, such as parking lots and sidewalks, etc. This zones will be ignored
         self.xyidx = config['xy_indx']
         self.Centre = config['Centre']
+        self.dwn_smple = config['dwn_smple']
         self.eyemat = torch.eye(self.Nnodes, self.Nnodes, device=self.device)
         self.epsilon = -1e-16
         self.ID = [] # We keep the track of the object IDs
@@ -51,14 +52,14 @@ class Scenes(Dataset):
         for j in range(0, self.sn*self.sw, self.sw):
             final_indx = j + self.sl + self.future
             start_indx = j + self.sl
-            scene = fullscene[j : j+ self.sl]
+            scene = fullscene[j : j+ self.sl: self.dwn_smple]
             no_show_frames = (scene[:,:,self.xyidx[0]] == 0).sum(dim=0) # The number of zeros in the x direction, which means they are out of camera sight
-            no_show_frames = (no_show_frames < self.sl//2).view(1, self.Nnodes, 1) # At least the vehicle must be half of the sequence, unless we ignore the scene
-            target = fullscene[start_indx : final_indx] * no_show_frames
+            no_show_frames = (no_show_frames < self.sl//2//self.dwn_smple).view(1, self.Nnodes, 1) # At least the vehicle must be half of the sequence, unless we ignore the scene
+            target = fullscene[start_indx : final_indx:self.dwn_smple] * no_show_frames
             scene = scene* no_show_frames
             self.addnew(scene, target, 
-                        Zones[j : final_indx], IDs[j:final_indx],
-                        Fr[j:final_indx], NObjs)
+                        Zones[j : final_indx: self.dwn_smple], IDs[j:final_indx: self.dwn_smple],
+                        Fr[j:final_indx: self.dwn_smple], NObjs)
         
 
     def augmentation(self, num): # it works with permuting the order of the users in the scene  "num" times
@@ -226,7 +227,7 @@ def Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config): # Nnodes, 
             Scene = torch.stack(Scene, dim=0).to(device=device)
             Scene, Zones, IDs, NObjs = ConsistensyCheck(Scene, Zones, IDs, Nnodes, NFeatures) # Now we sort the agents to be on the same row in the whole Scene
             if trORtst == 1: # test
-                Scenetst.Slide_(Scene, Zones, IDs, Fr, NObjs)
+                Scenetst.Slide_(Scene, Zones, IDs, Fr, NObjs, dssc)
             if not only_test: # 
                 if trORtst == 0:
                     Scenetr.Slide_(Scene, Zones, IDs, Fr, NObjs)

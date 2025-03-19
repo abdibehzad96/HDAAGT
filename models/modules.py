@@ -24,15 +24,9 @@ class FeedForwardNetwork(nn.Module):
 ################################
 class DAAG_Layer(nn.Module):
     r"""
-    ## Graph attention v2 layer
+    ## Decision-Aware Attention Graph Transformer (DAAGT) Layer
     This is a single graph attention v2 layer.
-    A GATv2 is made up of multiple such layers.
-    It takes
-    $$\mathbf{h} = \{ \overrightarrow{h_1}, \overrightarrow{h_2}, \dots, \overrightarrow{h_N} \}$$,
-    where $\overrightarrow{h_i} \in \mathbb{R}^F$ as input
-    and outputs
-    $$\mathbf{h'} = \{ \overrightarrow{h'_1}, \overrightarrow{h'_2}, \dots, \overrightarrow{h'_N} \}$$,
-    where $\overrightarrow{h'_i} \in \mathbb{R}^{F'}$.
+    author: @Behzad Abdi
     """
 
     def __init__(self, in_features: int, out_features: int, n_heads: int, n_nodes: int,
@@ -83,9 +77,6 @@ class DAAG_Layer(nn.Module):
         self.FF = FeedForwardNetwork(self.n_hidden, self.n_hidden)
         self.Rezero = nn.Parameter(torch.zeros(self.n_hidden))
         self.LN = nn.LayerNorm(n_nodes)
-
-        # self.socialpool = nn.Conv2d(32,32, kernel_size=(1,32), stride=1, padding=0)    # This worked perfectly
-        # self.adjAtt = nn.MultiheadAttention(embed_dim= n_nodes, num_heads=n_heads, batch_first=True) # we want to train the attention weights
     def forward(self, h0: torch.Tensor, adj_mat: torch.Tensor):
         r"""
         * `h`, $\mathbf{h}$ is the input node embeddings of shape `[n_nodes, in_features]`.
@@ -99,13 +90,6 @@ class DAAG_Layer(nn.Module):
         B, SL, n_nodes, _ = h0.shape
         adj_mat = adj_mat - torch.eye(n_nodes).to(adj_mat.device).repeat(B, SL, 1, 1)
         adj_mat = adj_mat.unsqueeze(-2) < 0.1
-        # h = h.reshape(-1, 32, 128)
-        # The initial transformations,
-        # $$\overrightarrow{{g_l}^k_i} = \mathbf{W_l}^k \overrightarrow{h_i}$$
-        # $$\overrightarrow{{g_r}^k_i} = \mathbf{W_r}^k \overrightarrow{h_i}$$
-        # for each head.
-        # We do two linear transformations and then split it up for each head.
-        # h = self.LN(h0)
         h = h0
         q = self.linear_l(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         k = self.linear_r(-h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
@@ -163,3 +147,22 @@ def target_mask0(trgt, num_head, device="cuda:3"):
 def create_src_mask(src, device="cuda:3"):
     mask = src[:,:,:, 1] == 0
     return mask
+
+class Classifier(nn.Module):
+    def __init__(self, hidden_size, no = 1):
+        super(Classifier, self).__init__()
+        self.conv1 = nn.Conv1d(17,  17, 7, 2, 3)
+        self.conv2 = nn.Conv1d(8,  17, 7, 2, 3)
+        self.conv3 = nn.Conv1d(6,  17, 7, 2, 3)
+        self.out = nn.Linear(hidden_size//2, hidden_size//2)
+        self.LN = nn.LayerNorm(hidden_size)
+        self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))
+        self.dropout = nn.Dropout(0.25)
+        
+    def forward(self, h):
+        x0 = F.relu(self.conv1(h))
+        x1 = F.relu(self.conv2(h[:,1::2]))
+        x2 = F.relu(self.conv3(h[:,1::3]))
+        x = self.dropout(x0 + x1 + x2)
+        x = self.out(x)*self.Rezero + x
+        return x

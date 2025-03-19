@@ -3,293 +3,131 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.modules import *
-# from utilz.utils import target_mask , create_src_mask
 
-class FFGAT(nn.Module):
-    def __init__(self, args):
-        s = args.hidden_size
-    def edge_index(self, adj):
-        edge_indx = torch.zeros_like(adj)
-        indices = torch.nonzero(adj> 0.1, as_tuple=True)
-        edge_indx[indices] = 1
-        return edge_indx
-    
-    def convert_to_edge_list(self, adj):
-        # Initialize an empty list to store the edge list
-        edge_list = []
-        # Iterate through the batch of the adjacency matrix
-        for b in range(adj.shape[0]):
-            # Iterate through the sequence of the adjacency matrix
-            # for s in range(adj.shape[1]):
-                Ixy = torch.nonzero(adj[b,0]>0.1, as_tuple=False).t()
-                edge_list.append(Ixy)
-        # Return the edge list
-        return edge_list
+class TrafficEmbedding(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.hidden_size = config['hidden_size']
+        num_heads = config['num_heads']
+        self.xy_indx = config['xy_indx']
+        self.Traffic_indx = config['Traffic_indx']
+        self.Linear_indx = torch.arange(len(config['NFeatures']), config['input_size'])
+        self.Postional_embeddings = nn.ModuleList()
+        self.Traffic_embeddings = nn.ModuleList()
+        for i in config['Traffic_indx']:
+            self.Traffic_embeddings.append(nn.Embedding(config['Embedding_dict_size'][i], config['Embedding_model_dim'][i]), padding_idx=0)
+        for i in config['xy_indx']:
+            self.Postional_embeddings.append(nn.Embedding(config['Embedding_dict_size'][i], config['Embedding_model_dim'][i]), padding_idx=0)
 
-class convdeep(nn.Module):
-    def __init__(self, hidden_size):
-        super(convdeep, self).__init__()
-        self.conv1 = nn.Conv1d(hidden_size,hidden_size,3, 1, 1)
-        self.conv2 = nn.Conv1d(hidden_size, hidden_size,5,1,2)
-        self.conv3 = nn.Conv1d(hidden_size,hidden_size,7,1,3)
-        self.conv4 = nn.Conv2d(3,1,)
 
-    def forward(self, h):
-        # x shape is [B, SL, F]
-        x = h.permute(0,2,1)
-        x1 = F.leaky_relu(self.conv1(x))
-        x2 = F.leaky_relu(self.conv2(x))
-        x3 = F.leaky_relu(self.conv3(x))
-        x  = x1 + x2 + x3
-        return x.permute(0,2,1)
+        # For the Linear embeddings, we consider the followinng fully connected layers
+        self.LE_LN1 = nn.LayerNorm(config['Num_linear_inputs'])
+        self.Linear_Embedding1 = nn.Linear(config['input_size'], self.hidden_size)
+        self.LE_LN2 = nn.LayerNorm( self.hidden_size)
+        self.Linear_Embedding2 = nn.Linear( self.hidden_size, self.hidden_size)
+        self.LE_LN3 = nn.LayerNorm( self.hidden_size)
+        self.Linear_Embedding3 = nn.Linear( self.hidden_size, self.hidden_size)
 
-class Classifier(nn.Module):
-    def __init__(self, hidden_size, no = 1):
-        super(Classifier, self).__init__()
-        self.conv1 = nn.Conv1d(17,  17, 7, 2, 3)
-        self.conv2 = nn.Conv1d(8,  17, 7, 2, 3)
-        self.conv3 = nn.Conv1d(6,  17, 7, 2, 3)
-        self.out = nn.Linear(hidden_size//2, hidden_size//2)
-        self.LN = nn.LayerNorm(hidden_size)
-        self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))
+        # 3 Multihead attention layers for the position, traffic and mixed embeddings
+        self.Position_Att = nn.MultiheadAttention(embed_dim=3* self.hidden_size, num_heads=num_heads, batch_first=True)
+        self.Traffic_Att = nn.MultiheadAttention(embed_dim= 3* self.hidden_size, num_heads=num_heads, batch_first=True)
+        self.Mixed_Att = nn.MultiheadAttention(embed_dim= 3* self.hidden_size, num_heads=num_heads, batch_first=True)
+
+        self.Traffic_FF = FeedForwardNetwork(d_model=3* self.hidden_size, out_dim=3* self.hidden_size)
+        self.Pos_FF = FeedForwardNetwork(d_model=3* self.hidden_size, out_dim=3* self.hidden_size)
+        self.Mixed_FF = FeedForwardNetwork(d_model=3* self.hidden_size, out_dim=3* self.hidden_size)
+
+
+        self.LE_Rezero2 = nn.Parameter(torch.zeros(self.hidden_size))
+        self.LE_Rezero3 = nn.Parameter(torch.zeros(self.hidden_size))
+        self.Traffic_Rezero = nn.Parameter(torch.zeros(3* self.hidden_size))
+        self.Position_Rezero = nn.Parameter(torch.zeros(3* self.hidden_size))
+        self.Mixed_Rezero = nn.Parameter(torch.zeros(3* self.hidden_size))
+        self.Mixed_Rezero2 = nn.Parameter(torch.zeros(3* self.hidden_size))
+        
+        self.DAAG = DAAG_Layer(in_features=2*self.hidden_size, out_features=2*self.hidden_size, n_heads= num_heads, n_nodes = config['Nnodes'], concat=True)
+
+        self.TemporalConv = Classifier(2* self.hidden_size)
+        self.Temporal = nn.LSTM(2* self.hidden_size,  self.hidden_size, num_heads, batch_first=True)
+
+        self.LN = nn.LayerNorm( self.hidden_size*3)
+        self.LN1 = nn.LayerNorm( self.hidden_size)
+        self.LNembx = nn.LayerNorm(3* self.hidden_size)
         self.dropout = nn.Dropout(0.25)
-        
-    def forward(self, h):
-        # h = h.unsqueeze(1)
-        x0 = F.relu(self.conv1(h))
-        x1 = F.relu(self.conv2(h[:,1::2]))
-        x2 = F.relu(self.conv3(h[:,1::3]))
-        # x3 = F.relu(self.conv4(h[:,1::7]))
-        # x3 = F.leaky_relu(self.conv4(h[:,::6]))
-        x = self.dropout(x0 + x1 + x2)
-        # x = self.LN(x)
-        x = self.out(x)*self.Rezero + x
-        return x
 
-class deepFF(nn.Module):
-    def __init__(self, input_size, output_size, n_heads):
-        super(deepFF, self).__init__()
-        self.GAT1 = DAAG_Layer(in_features=input_size, out_features=output_size, n_heads=n_heads, n_nodes=32,
-                    concat=True)
-        self.hidden_size = output_size
-        
-        # self.dropout = nn.Dropout(0.1)
-    def forward(self, h, adj):
-        B, SL, Nnodes, _ = h.size()
-        # x = h + Spatial_encoding(h, self.hidden_size)
-        x = self.GAT1(h, adj)
-        return x
-
-class TrfEmb(nn.Module):
-    def __init__(self, hidden_size, num_heads):
-        super(TrfEmb, self).__init__()
-        self.embdx = nn.Embedding(1024, hidden_size, padding_idx=0)
-        # self.emby = nn.Embedding(1024, hidden_size//2, padding_idx=0)
-        self.embdTrL = nn.Embedding(9, hidden_size//8, padding_idx=0)
-        self.embdZone = nn.Embedding(12, hidden_size//2, padding_idx=0)
-        self.speed_HS = hidden_size #- 5*(hidden_size//8)
-        self.speedLN = nn.LayerNorm(17)
-        self.speedLN1 = nn.LayerNorm(self.speed_HS)
-        self.speedLN2 = nn.LayerNorm(self.speed_HS)
-        self.speed = nn.Linear(17, self.speed_HS )
-        self.speed2 = nn.Linear(self.speed_HS, self.speed_HS)
-        self.speed3 = nn.Linear(self.speed_HS, self.speed_HS)
-
-        self.Att = nn.MultiheadAttention(embed_dim=3* hidden_size, num_heads=num_heads, batch_first=True)
-        self.AttTrf = nn.MultiheadAttention(embed_dim= 3*hidden_size, num_heads=num_heads, batch_first=True)
-        self.AttAll = nn.MultiheadAttention(embed_dim= 3*hidden_size, num_heads=num_heads, batch_first=True)
-        
-        # self.TemporalConv = convdeep(hidden_size)
-        
-        # self.TemporalFC = nn.Linear(3*hidden_size, hidden_size)
-        self.FFTrfL = FeedForwardNetwork(d_model=3*hidden_size, out_dim=3*hidden_size)
-        self.FFxy = FeedForwardNetwork(d_model=3*hidden_size, out_dim=3*hidden_size)
-        self.FFAll = FeedForwardNetwork(d_model=3*hidden_size, out_dim=3*hidden_size)
-        self.RezeroTrF = nn.Parameter(torch.zeros(3*hidden_size))
-        self.RezeroXY = nn.Parameter(torch.zeros(3*hidden_size))
-        self.RezeroALL = nn.Parameter(torch.zeros(3*hidden_size))
-        self.RezeroALLFF = nn.Parameter(torch.zeros(3*hidden_size))
-        self.RezeroSpeed = nn.Parameter(torch.zeros(self.speed_HS))
-        self.RezeroSpeed2 = nn.Parameter(torch.zeros(self.speed_HS))
-        self.hidden_size = hidden_size
-        self.d_model = hidden_size
-        self.DeepFF = deepFF(2*hidden_size, 2*hidden_size, n_heads=2*num_heads)
-        self.TemporalConv = Classifier(2*hidden_size)
-        self.Temporal = nn.LSTM(2*hidden_size, hidden_size, num_heads, batch_first=True)
-
-        self.LN = nn.LayerNorm(hidden_size*3)
-        self.LN1 = nn.LayerNorm(hidden_size)
-        self.LNembx = nn.LayerNorm(3*hidden_size)
-        
-
-        self.dropout1 = nn.Dropout(0.25) 
-        self.dropout2 = nn.Dropout(0.25)
-        self.dropoutTrf = nn.Dropout(0.25)
-    def forward(self, x, src_mask, adj, trgt_mask):
+    def forward(self, x, src_mask, adj):
+        x = x.permute(0,2,1,3)
         B, Nnodes, SL, _ = x.size()
-        embxy= self.embdx(x[:,:,:,1:3].long()).flatten(-2)
 
-        # embxy = torch.cat((embx, emby), dim = -1)# .reshape(-1,x.size(2), self.hidden_size) # [B* Nnodes, SL, hidden_size]
-        embTrf = self.embdTrL(x[:,:,:,3:7].long()).flatten(-2)
-        embZone = self.embdZone(x[:,:,:,0].long())
-        speed = x[:,:,:,7:]
-        speed = self.speedLN(speed)
-        speed1 = self.speed(speed)
-        speed2 = self.RezeroSpeed* self.speed2(F.leaky_relu(speed1)) + speed1
-        # speed2 = self.speedLN1(self.speed2(F.leaky_relu(speed1)) + speed1) 
-        speed = self.RezeroSpeed2* self.speed3(F.leaky_relu(speed2)) + speed2
-        # speed = self.speedLN2(self.speed3(F.leaky_relu(speed2)) + speed2)
-        
-        # h = embxy.reshape(B, Nnodes, SL, self.hidden_size)
-        h = embxy.permute(0,2,1,3)  
-        h = self.DeepFF(h, adj)
-        embxy = h.permute(0,2,1,3).reshape(B*Nnodes, SL, 2*self.hidden_size)
 
-        stlstm , _ = self.Temporal(embxy)
-        convtemp = self.TemporalConv(embxy)
+        # Embeddings for the position and traffic
+        positional_embedding = []
+        Traffic_embedding = []
+        for i in self.xy_indx:
+            positional_embedding.append(self.Postional_embeddings[i](x[:,:,:,i].long()))
+        for i in self.Traffic_indx:
+            Traffic_embedding.append(self.Traffic_embeddings[i](x[:,:,:,i].long()))
+        Pos_embd = torch.cat(positional_embedding, dim=-1)
+        Trf_embd = torch.cat(Traffic_embedding, dim=-1)
 
-        Traffic_embd = torch.cat((embTrf,embZone, speed), dim=-1).reshape(-1, SL, 2*self.hidden_size)
+        Lin_embd = self.LE_LN1(x[:,:,:,self.Linear_indx])
+        Lin_embd1 = self.Linear_Embedding1(Lin_embd)
+        Lin_embd2 = self.LE_Rezero2* self.Linear_Embedding2(F.leaky_relu(Lin_embd1)) + Lin_embd1
+        Lin_embd = self.LE_Rezero3* self.Linear_Embedding3(F.leaky_relu(Lin_embd2)) + Lin_embd2
+
+        Pos_embd = Pos_embd.permute(0,2,1,3)  
+        Pos_embd = self.DAAG(Pos_embd, adj)
+        Pos_embd = Pos_embd.permute(0,2,1,3).reshape(B*Nnodes, SL, 2*self.hidden_size)
+
+        stlstm , _ = self.Temporal(Pos_embd)
+        convtemp = self.TemporalConv(Pos_embd)
+
+        Traffic_embd = torch.cat((Trf_embd, Lin_embd), dim=-1).reshape(-1, SL, 2*self.hidden_size)
         Traffic_embd = torch.cat((Traffic_embd, convtemp), dim =-1)
-        Traffic_embd = self.dropoutTrf(Traffic_embd)
+        Traffic_embd = self.dropout(Traffic_embd)
         
-
-        Traffic_embd = Traffic_embd + positional_encoding(Traffic_embd,3*self.d_model)
-
-        embxy= torch.cat((embxy,stlstm), dim=-1)
-        # embxy = self.LN(embxy)
-        # embxy = self.TemporalFC(embxy)
-
-        
-        embxy = embxy + positional_encoding(embxy, 3*self.d_model)
-
-
-
-        TrfATT = self.AttTrf(Traffic_embd, Traffic_embd, Traffic_embd, key_padding_mask = src_mask)[0] #key_padding_mask = src_mask
-        Traffic_embd = self.dropout2(self.RezeroTrF*TrfATT + Traffic_embd)
-        Traffic_embd = self.FFTrfL(Traffic_embd)
-
-
-        att_embxy = self.Att(embxy , embxy , embxy, need_weights=False, key_padding_mask = src_mask)[0] #key_padding_mask = src_mask
-
-        embxy = self.RezeroXY*att_embxy + embxy
-
-        # embxy = self.FFxy(embxy)
-        embxy = self.dropout1(embxy)
-
-
-
-        AttAll = self.AttAll(embxy, Traffic_embd, Traffic_embd, key_padding_mask = src_mask, need_weights=False)[0] #key_padding_mask = src_mask
-        ALL_EMbedding = self.RezeroALL*AttAll + embxy
-
-
-
-        ALL_EMbeddingFF = self.FFAll(ALL_EMbedding)
-        # ALL_EMbedding = self.LNLast(ALL_EMbedding + ALL_EMbeddingFF)
-        ALL_EMbedding = ALL_EMbedding + self.RezeroALLFF*ALL_EMbeddingFF
-        # att = att.reshape(x.size(0), 32,20, self.hidden_size)
-        # ALL_EMbedding = self.LN(ALL_EMbedding)
-        # _ ,ALL_EMbedding = self.Temporal(ALL_EMbedding)
-
+        Traffic_embd = Traffic_embd + positional_encoding(Traffic_embd, 3*self.hidden_size)
+        Pos_embd= torch.cat((Pos_embd,stlstm), dim=-1)
+        Pos_embd = Pos_embd + positional_encoding(Pos_embd, 3*self.hidden_size)
+        TrfATT = self.Traffic_Att(Traffic_embd, Traffic_embd, Traffic_embd, key_padding_mask = src_mask)[0] #key_padding_mask = src_mask
+        Traffic_embd = self.dropout(self.Traffic_Rezero*TrfATT + Traffic_embd)
+        Traffic_embd = self.Traffic_FF(Traffic_embd)
+        att_embxy = self.Position_Att(Pos_embd , Pos_embd , Pos_embd, need_weights=False, key_padding_mask = src_mask)[0] #key_padding_mask = src_mask
+        Pos_embd = self.Position_Rezero*att_embxy + Pos_embd
+        Pos_embd = self.dropout(Pos_embd)
+        AttAll = self.Mixed_Att(Pos_embd, Traffic_embd, Traffic_embd, key_padding_mask = src_mask, need_weights=False)[0] #key_padding_mask = src_mask
+        ALL_EMbedding = self.Mixed_Rezero*AttAll + Pos_embd
+        ALL_EMbeddingFF = self.Mixed_FF(ALL_EMbedding)
+        ALL_EMbedding = ALL_EMbedding + self.Mixed_Rezero2*ALL_EMbeddingFF
         return ALL_EMbedding
 
-
-class TargetEmb(nn.Module):
-    def __init__(self, hidden_size, num_heads):
-        super(TargetEmb, self).__init__()
-        self.embdx= nn.Embedding(1024, hidden_size//2, padding_idx=0)
-        # self.embdy = nn.Embedding(1024, hidden_size//2, padding_idx=0)
-        self.Att = nn.MultiheadAttention(embed_dim= hidden_size, num_heads=num_heads, batch_first=True)
-        self.FF = FeedForwardNetwork(d_model=hidden_size, out_dim=hidden_size)
-        self.ReZero = nn.Parameter(torch.zeros(hidden_size))
-        self.hidden_size = hidden_size
-        self.d_model = hidden_size
-        self.n_head = num_heads
-
-    def forward(self, trgt, trgt_mask, src_mask):
-        trgtxy= self.embdx(trgt.long()).flatten(-2).reshape(-1,trgt.size(2), self.hidden_size)
-        # trgty= self.embdy(trgt[:,:,:,1])
-        # trgtxy = torch.cat((trgtx, trgty), dim=-1).reshape(-1,trgt.size(2), self.hidden_size)
-        trgtxy = trgtxy + positional_encoding(trgtxy, self.d_model)
-        att_trgt = self.Att(trgtxy, trgtxy, trgtxy,attn_mask=trgt_mask, need_weights=False)[0] #, attn_mask=trgt_mask, attn_mask=trgt_mask.repeat_interleave(self.n_head, dim=0)
-        trgtxy = self.ReZero*att_trgt + trgtxy
-        trgtxy = self.FF(trgtxy)
-        return trgtxy
-    
-class Encoder(nn.Module):
-    def __init__(self, hidden_size, num_heads):
-        super(Encoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.InitEmbed = TrfEmb(self.hidden_size, num_heads)
-
-    def forward(self, scene, adj,src_mask, B, SL, Nnodes, trgt_mask):
-        h = scene
-        h = h.permute(0,2,1,3)
-        adj_zero = torch.ones_like(adj[:,0]).unsqueeze(1)
-        adj_mat = torch.cat((adj_zero, adj, adj_zero), dim=1)
-        h = self.InitEmbed(h, src_mask, adj_mat, trgt_mask)
-        return h
-    
-class Decoder(nn.Module):
-    def __init__(self, hidden_size, num_heads):
-        super(Decoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.TargetEmb = TargetEmb(self.hidden_size, num_heads)
-        self.AttAll = nn.MultiheadAttention(embed_dim= hidden_size, num_heads=num_heads, batch_first=True)
-        self.ReZeroTrgt = nn.Parameter(torch.zeros(self.hidden_size))
-        self.FF = FeedForwardNetwork(d_model=hidden_size, out_dim=hidden_size)
-        self.ReZeroFF = nn.Parameter(torch.zeros(self.hidden_size))
-        
-
-    def forward(self, Target, trgt_mask, enc_out,src_mask, B, Nnodes, TrgLen):
-        trgt = Target.permute(0,2,1,3) # [B, SL, Nnodes, 2] ---> [B, Nnodes, SL, 2]
-        trgt = self.TargetEmb(trgt, trgt_mask, src_mask)
-        Att = self.AttAll(trgt, enc_out, enc_out, need_weights=False)[0] #key_padding_mask = src_mask
-        trgt = self.ReZeroTrgt*Att + trgt
-        trgtFF = self.FF(trgt)
-        trgt = trgt + self.ReZeroFF*trgtFF
-        trgt = trgt.reshape(B, Nnodes, TrgLen, self.hidden_size).permute(0,2,1,3)
-        return trgt
 
 class Projection(nn.Module):
     def __init__(self, hidden_size, output_size, embedsize):
         super(Projection, self).__init__()
         self.LN = nn.LayerNorm(hidden_size)
-        # self.linear1 = nn.Linear(hidden_size, hidden_size*2)
         self.linear2 = nn.Linear(hidden_size, output_size*embedsize)
         self.output_size = output_size
         self.embedsize = embedsize
 
-    
     def forward(self, x):
-        B, SL, Nnodes = x.size()
-        # x = self.linear1(x)
-        # x = F.gelu(x)
+        B, SL, _ = x.size()
         x = self.LN(x)
         x = self.linear2(x).reshape(B//32, 32,  SL, self.output_size, self.embedsize).permute(0,2,1,3,4)
         return x
 
 
-class GGAT(nn.Module):
-    def __init__(self, args):
-        super(GGAT, self).__init__()
-        self.embed_size = args.input_size
-        self.hidden_size = args.hidden_size
-        self.d_model = args.hidden_size
-        self.device = args.device
-        self.num_layers = args.num_layersGRU
-        self.output_size = args.output_size
-        self.encoder = Encoder(self.hidden_size, num_heads=args.n_heads)
-        # self.decoder = Decoder(self.hidden_size, num_heads=args.n_heads)
+class HDAAGT(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.hidden_size = config['hidden_size']
+        self.encoder = TrafficEmbedding(config)
         self.proj = Projection(self.hidden_size*3, 2, 1024)
-        
-        #['BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone']
-    def forward(self, scene: torch.Tensor, src_mask, adj, Target, trgt_mask):
-        B, SL, Nnodes, _ = scene.size()
-        TrgL = Target.size(1)
-        enc_out = self.encoder(scene, adj, src_mask, B, SL, Nnodes, trgt_mask)
-        # h = self.decoder(Target,trgt_mask, enc_out,src_mask, B, Nnodes, TrgL)
-        h = self.proj(enc_out)
-        return h
+    def forward(self, scene: torch.Tensor, src_mask, adj_mat: torch.Tensor):
+        enc_out = self.encoder(scene, src_mask, adj_mat)
+        DAAG_out = self.DAAG(enc_out, adj_mat)
+        proj = self.proj(DAAG_out)
+        return proj
 
 
 

@@ -19,20 +19,25 @@ if __name__ == '__main__':
     ct = datetime.datetime.now().strftime("%m-%d-%H-%M") # Current time, used for saving the log
     print(f"Total  # of GPUs {torch.cuda.device_count()}")
     print(f"Using {device} device")
-    with  open("config.yaml") as file:
+    with  open("configs/config.yaml") as file:
         config = yaml.safe_load(file)
     
     ZoneConf = Zoneconf(config['Zoneconf_path'])
     # config needs more information to be passed to the model
     config['NFeatures']= len(config["Columns_to_keep"]) # This goes to the data preparation process
     config["input_size"] = config["NFeatures"] + 9 + 8 # This goes to the model, we add couple of more features to the input
+    config['sos'] = torch.cat(torch.tensor([10,1016,1016,7,7,7,7] , torch.zeros(17))).repeat(1,1,config['Nnodes'], 1).to(device)
+    config['eos'] = torch.cat(torch.tensor([11,1020,1020,8,8,8,8]), torch.zeros(17)).repeat(1,1,config['Nnodes'],1).to(device)
     config["output_size"] = len(config['Columns_to_Predict']) # The number of columns to predict
     config['device'] = device
     config['ct'] = ct
 
 
+
     for arg in config.items(): # Print the arguments to the log file
         savelog(f"{arg[0]} = {arg[1]}", ct)
+    
+    # Before Everything, make sure to assert all the parameters are correct, implement later
     # Create datasets
     Scenetr = Scenes(config)
     Scenetst = Scenes(config)
@@ -46,7 +51,7 @@ if __name__ == '__main__':
 
     else:
         savelog("Loading CSV file ...", ct)
-        Traffic_data = loadcsv(config['csvpath'], config['Headers'])
+        Traffic_data = loadcsv(config['detection_path'], config['Headers'])
         Scenetr, Scenetst, Sceneval = Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config)
         # Scenetr.augmentation(4)
         Scenetr.addnoise(config['noise_multiply'], config['noise_amp'], config['ratio'])
@@ -59,7 +64,7 @@ if __name__ == '__main__':
     train_loader, test_loader, val_loader = DataLoader_Scene(Scenetr, Scenetst, Sceneval, config['batch_size'])
     
 
-    model = GGAT(config)
+    model = HDAAGT(config)
     if not config['model_from_scratch']:
         savelog("Loading model from the checkpoint", ct)
         mpath = os.path.join(cwd,'Processed','checkpoint.pth.tar')

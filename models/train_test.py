@@ -40,8 +40,9 @@ def train_model(model, optimizer, criterion, train_loader, test_loader, clip, ar
             optimizer.zero_grad()
             scene = Scene[:,0::dssc,:,:input_size].clone().detach()
             scene = torch.cat((sos.repeat(scene.size(0),1,1,1), scene,eos.repeat(scene.size(0),1,1,1)), dim=1)
+            adj_sos_eos = torch.ones_like(Adj_Mat_Scene[:,0]).unsqueeze(1) # This is done to match the scene size after eos and sos are added
+            adj_mat = torch.cat((adj_sos_eos, Adj_Mat_Scene[:,0::dssc], adj_sos_eos), dim=1)
             scene_mask = create_src_mask(scene)
-            adj_mat = Adj_Mat_Scene[:,0::dssc]
             target = Target[:, ::dstar,:, 1:3].clone().detach() #0:20:dstar
 
             target = torch.cat((sos[:,:,:,1:3].repeat(target.size(0),1,1,1), target,eos[:,:,:,1:3].repeat(target.size(0),1,1,1)), dim=1).long()
