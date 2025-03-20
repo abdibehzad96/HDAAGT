@@ -77,7 +77,7 @@ class DAAG_Layer(nn.Module):
         self.FF = FeedForwardNetwork(self.n_hidden, self.n_hidden)
         self.Rezero = nn.Parameter(torch.zeros(self.n_hidden))
         self.LN = nn.LayerNorm(n_nodes)
-    def forward(self, h0: torch.Tensor, adj_mat: torch.Tensor):
+    def forward(self, h: torch.Tensor, Adj_mat: torch.Tensor):
         r"""
         * `h`, $\mathbf{h}$ is the input node embeddings of shape `[n_nodes, in_features]`.
         * `adj_mat` is the adjacency matrix of shape `[n_nodes, n_nodes, n_heads]`.
@@ -87,15 +87,14 @@ class DAAG_Layer(nn.Module):
         """
 
         # Number of nodes
-        B, SL, n_nodes, _ = h0.shape
-        adj_mat = adj_mat - torch.eye(n_nodes).to(adj_mat.device).repeat(B, SL, 1, 1)
-        adj_mat = adj_mat.unsqueeze(-2) < 0.1
-        h = h0
+        B, SL, n_nodes, _ = h.shape
+        Adj_mat = Adj_mat - torch.eye(n_nodes).to(Adj_mat.device).repeat(B, SL, 1, 1)
+        Adj_mat = Adj_mat.unsqueeze(-2) < 0.1
         q = self.linear_l(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         k = self.linear_r(-h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         v = self.linear_v(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         score = torch.einsum("bsihf, bsjhf->bsihj", [q, k])/ ((self.n_hidden*self.n_heads*n_nodes)**0.5)
-        score = score.masked_fill(adj_mat, -1e6)
+        score = score.masked_fill(Adj_mat, -1e6)
         score = torch.exp(score).sum(-1).unsqueeze(-1)
         score = self.scoreatt(score)
         score = self.LN(score)
@@ -111,6 +110,25 @@ class DAAG_Layer(nn.Module):
             return score.mean(-2)
         
 
+class TemporalConv(nn.Module):
+    def __init__(self, hidden_size, no = 1):
+        super(TemporalConv, self).__init__()
+        self.conv1 = nn.Conv1d(17,  17, 7, 2, 3)
+        self.conv2 = nn.Conv1d(8,  17, 7, 2, 3)
+        self.conv3 = nn.Conv1d(6,  17, 7, 2, 3)
+        self.out = nn.Linear(hidden_size//2, hidden_size//2)
+        self.LN = nn.LayerNorm(hidden_size)
+        self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))
+        self.dropout = nn.Dropout(0.25)
+        
+    def forward(self, h):
+        x0 = F.relu(self.conv1(h))
+        x1 = F.relu(self.conv2(h[:,1::2]))
+        x2 = F.relu(self.conv3(h[:,1::3]))
+        x = self.dropout(x0 + x1 + x2)
+        x = self.out(x)*self.Rezero + x
+        return x
+    
 def positional_encoding(x, d_model):
 
         # result.shape = (seq_len, d_model)
@@ -144,25 +162,10 @@ def target_mask0(trgt, num_head, device="cuda:3"):
         mask = mask.repeat_interleave(num_head,dim=0)
     return mask == 0
 
-def create_src_mask(src, device="cuda:3"):
+def create_src_mask(src): # src => [B, SL, Nnodes, Features]
     mask = src[:,:,:, 1] == 0
-    return mask
+    return mask.permute(0,2,1).reshape(-1, src.size(1)) # out => [B* Nnodes, SL]
 
-class Classifier(nn.Module):
-    def __init__(self, hidden_size, no = 1):
-        super(Classifier, self).__init__()
-        self.conv1 = nn.Conv1d(17,  17, 7, 2, 3)
-        self.conv2 = nn.Conv1d(8,  17, 7, 2, 3)
-        self.conv3 = nn.Conv1d(6,  17, 7, 2, 3)
-        self.out = nn.Linear(hidden_size//2, hidden_size//2)
-        self.LN = nn.LayerNorm(hidden_size)
-        self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))
-        self.dropout = nn.Dropout(0.25)
-        
-    def forward(self, h):
-        x0 = F.relu(self.conv1(h))
-        x1 = F.relu(self.conv2(h[:,1::2]))
-        x2 = F.relu(self.conv3(h[:,1::3]))
-        x = self.dropout(x0 + x1 + x2)
-        x = self.out(x)*self.Rezero + x
-        return x
+def attach_sos_eos(src, sos, eos): # src => [B, SL0, Nnodes, Features]
+    return torch.cat((sos.repeat(src.size(0),1,1,1), src, eos.repeat(src.size(0),1,1,1)), dim=1) # out => [B, SL0+2, Nnodes, Features]
+

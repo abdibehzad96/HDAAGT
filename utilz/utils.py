@@ -1,9 +1,6 @@
 # This file will generate dataset for Scene centric models
 from torch.utils.data import Dataset, DataLoader
-import csv
-import datetime
 import os
-import random
 import torch
 import pandas as pd
 import yaml
@@ -33,14 +30,14 @@ class Scenes(Dataset):
         self.Fr = [] # Same as ID but for the frame number
         self.Zones = []
         self.NUsers = [] # Number of users in each scene, this helps decreasing the preprocessings
-        self.Scene = torch.empty(0, self.sl, self.Nnodes, self.input_size, dtype=torch.long, device=self.device) #[Sampeles, Sequence Length, Nnodes, NFeatures], Scene is the input to the model
-        self.Adj_Mat_Scene = torch.empty(0, self.sl, self.Nnodes, self.Nnodes, device=self.device) #[Sampeles, Sequence Length, Nnodes, Nnodes], Adjacency matrix for the Scene
-        self.Target = torch.empty(0, self.future, self.Nnodes, self.input_size, device=self.device, dtype= torch.long) #[Sampeles, Sequence Length, Nnodes, NFeatures], Target is the output of the model
+        self.Scene = torch.empty(0, self.sl//self.dwn_smple, self.Nnodes, self.input_size, dtype=torch.long, device=self.device) #[Sampeles, Sequence Length, Nnodes, NFeatures], Scene is the input to the model
+        self.Adj_Mat_Scene = torch.empty(0, self.sl//self.dwn_smple, self.Nnodes, self.Nnodes, device=self.device) #[Sampeles, Sequence Length, Nnodes, Nnodes], Adjacency matrix for the Scene
+        self.Target = torch.empty(0, self.future//self.dwn_smple, self.Nnodes, self.input_size, device=self.device, dtype= torch.long) #[Sampeles, Sequence Length, Nnodes, NFeatures], Target is the output of the model
 
 
     def addnew(self, Scene, Target, Zones, ID, Fr, NObjs):
         self.Scene = torch.cat((self.Scene, Scene.unsqueeze(0)), dim=0)
-        self.Adj_Mat_Scene = torch.cat((self.Adj_Mat_Scene, self.Adjacency(Scene, Zones[:self.sl], NObjs).unsqueeze(0)), dim=0)
+        self.Adj_Mat_Scene = torch.cat((self.Adj_Mat_Scene, self.Adjacency(Scene, Zones[:self.sl:self.dwn_smple], NObjs).unsqueeze(0)), dim=0)
         self.Zones.append(Zones) 
         self.ID.append(ID)
         self.Fr.append(Fr)
@@ -174,7 +171,7 @@ class Scenes(Dataset):
     
     
 
-def Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config): # Nnodes, NFeatures, sl, future, sw, sn, Columns_to_keep, seed, ct, only_test, device):
+def Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config):
     Nnodes = config['Nnodes']
     NFeatures = config['NFeatures']
     sl = config['sl']
@@ -184,7 +181,6 @@ def Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config): # Nnodes, 
     Columns_to_keep = config['Columns_to_keep']
     Seed = not config['generate_data']
     ct = config['ct']
-    only_test = config['only_test']
     device = config['device']
     Nusers = config['Nusers']
     
@@ -227,12 +223,11 @@ def Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config): # Nnodes, 
             Scene = torch.stack(Scene, dim=0).to(device=device)
             Scene, Zones, IDs, NObjs = ConsistensyCheck(Scene, Zones, IDs, Nnodes, NFeatures) # Now we sort the agents to be on the same row in the whole Scene
             if trORtst == 1: # test
-                Scenetst.Slide_(Scene, Zones, IDs, Fr, NObjs, dssc)
-            if not only_test: # 
-                if trORtst == 0:
-                    Scenetr.Slide_(Scene, Zones, IDs, Fr, NObjs)
-                elif trORtst == 2:
-                    Sceneval.Slide_(Scene, Zones, IDs, Fr, NObjs)
+                Scenetst.Slide_(Scene, Zones, IDs, Fr, NObjs)
+            if trORtst == 0:
+                Scenetr.Slide_(Scene, Zones, IDs, Fr, NObjs)
+            elif trORtst == 2:
+                Sceneval.Slide_(Scene, Zones, IDs, Fr, NObjs)
             Scene = []
             Fr = []
             IDs = []
@@ -287,35 +282,10 @@ def loadcsv(frmpath, Header, trjpath = None):
     if trjpath is not None:
         trj = pd.read_csv(trjpath, dtype =float)
         return df, trj
-    # with open(csvpath, 'r',newline='') as file:
-    #     for line in file:
-    #         row = line.strip().split(',')
-    #         # rowf = [float(element) for element in row]
-    #         # rowf = [0 if math.isnan(x) else x for x in rowf]
-    #         df.append(row)
     return df
 
 
-def savecsvresult(pred , groundx, groundy):
-    cwd = os.getcwd()
-    ct = datetime.datetime.now().strftime(r"%m%dT%H%M")
-    csvpath = os.path.join(cwd,'Processed',f'Predicteddata{ct}.csv')
-    with open(csvpath, 'w',newline='') as file:
-        writer = csv.writer(file)
-        for i in range(len(groundx)):
-            rowx = pred[i,:,0].tolist()
-            rowy = pred[i,:,1].tolist()
-            grx = groundx[i,:,0].tolist()
-            gry = groundx[i,:,1].tolist()
-            grxx = groundy[i,:,0].tolist()
-            gryy = groundy[i,:,1].tolist()
-            writer.writerow([rowx,grxx,grx])
-            writer.writerow([rowy,gryy,gry])
-
-
-
-
-def savelog(log, ct): # append the log to the existing log file while keeping the old logs
+def savelog(log, ct): # appends the log to the existing log file while keeping the old logs
     # if the log file does not exist, create one
     print(log)
     if not os.path.exists(os.path.join(os.getcwd(),'logs')):
@@ -323,6 +293,7 @@ def savelog(log, ct): # append the log to the existing log file while keeping th
     with open(os.path.join(os.getcwd(),'logs', f'log-{ct}.txt'), 'a') as file:
         file.write('\n' + log)
         file.close()
+
 
 def Zoneconf(path = '/utilz/ZoneConf.yaml'):
     ZoneConf = []
@@ -352,35 +323,26 @@ def zonefinder(BB, Zones):
     
     return PredZone.reshape(B, Nnodes)
 
-def Zone_compare(Pred, Target, PrevZone, BB):
-    # possiblemoves = torch.tensor([0,2,5,7,8],[0,1,2,7,8],[2],[0,2,3,5,8],[0,2,4,5,7], [5],[0,5,6,7,8],[7],[8])
-    singlezones = torch.tensor([3,6,8,9], device=Pred.device)
-    neighbours = torch.tensor([[0],[1],[6],[7],[8],[9],[2],[3],[4],[5]], device=Pred.device)
-    B, Nnodes = Pred.size()
-    Pred = Pred.reshape(-1)
-    Target = Target.reshape(-1).cpu()
-    PrevZone = PrevZone.reshape(-1).cpu()
-    totallen = B*Nnodes
-    count = 0
-    nonzero = 0
-    doublezone = 0
-    for i in range(B*Nnodes):
-        if Target[i] != 0:
-            nonzero += 1
-            if Pred[i] == Target[i]:
-                    count += 1
-            else:
-                if PrevZone[i] in singlezones:
-                    totallen -= 1
-                    # print("Single Zone")
-                if Pred[i]== neighbours[Target[i].int()]:
-                    doublezone += 1
-                
-    return count, totallen, B*Nnodes, nonzero, doublezone
+
+def Find_topk_selected_words (Pred_target, Target):
+    Word_Probs = Pred_target.softmax(dim=-1)
+    top_values, top_indices = torch.topk(Word_Probs, k = 5, dim=-1)
+    Topk_Selected_words = (top_indices*top_values).sum(-1)/top_values.sum(-1)
+    flg = Target[:,:,:,:1] != 0 # We have blank rows in the data as the number of present agents changes during time
+    ADE = torch.sqrt(torch.pow((Topk_Selected_words*flg -Target),2).sum(-1)).mean()
+    FDE = torch.sqrt(torch.pow((Topk_Selected_words*flg -Target),2).sum(-1)[:,-1]).mean()
+    return Topk_Selected_words, ADE, FDE
 
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def load_model(model, weight_path, ct):
+        savelog("Loading model from the checkpoint", ct)
+        savelog('=> Loading checkpoint', ct)
+        checkpoint = torch.load(weight_path)
+        model.load_state_dict(checkpoint['state_dict'])
+        return model
 
 if __name__ == "__main__":
     print("Yohoooo, Ran a Wrong Script!")
