@@ -1,32 +1,33 @@
-<figure style="text-align: center;">
-  <img src="data/Idea2.bmp" style="clip-path: inset(50px 0px 25px 0px); object-fit: cover;">
-</figure>
+
+<p align="center"><img width="100%" src="data/Idea2.bmp" style="clip-path: inset(30px 0px 25px 0px); object-fit: cover;"/></p>
 
 # HDAAGT #
 <div style="text-align: justify;">
 Heterogeneous Decision-Aware Attention Graph Transformer for Scene-Centric Trajectory Predicton (HDAAGT): A non-autoregressive, encoder-only transformer model for vehicle trajectory prediction. HDAAGT integrates lane positioning, traffic light states, and vehicle kinematics, enabling a decision-aware graph attention mechanism that models agent-agent and agent-environment interactions. Decision-Aware Attention Graph(DAAG) network models the spatiotemporal influence of all neighboring road agents with and generates the decisions token for all road agents simultaneously.
 </div>
-
+<!-- 
 <figure style="text-align: center; background-color: white;width: 300px; margin: auto; ">
   <img src="models/DAAG.png" alt="DAAG">
   <figcaption style="font-style: italic; font-size: 14px; color: black;">Overview of the Decision-Aware Attention Graph Network.</figcaption>
-</figure>
+</figure> -->
+
+<p align="center"><img width="60%" src="models/DAAG.png" style="object-fit: cover;  background-color: white; margin: auto;"/></p>
 
 ## Installation
 Clone this repository with the following command:
-<div style="border: 1px solid #444; padding: 10px; margin: 5px; background-color: #2f363d; border-radius: 6px; color: white;">
-  git clone https://github.com/abdibehzad96/HDAAGT.git
-</div>
+```
+git clone https://github.com/abdibehzad96/HDAAGT.git
+```
 
 ## Environment Setup
 
 First, we'll create a conda environment to hold the dependencies
 
-<div style="border: 1px solid #444; padding: 10px; margin: 5px; background-color: #2f363d; border-radius: 6px; color: white;">
-conda create --name hdaagt python=3.10 -y, <br>
-source activate hdaagt, <br>
-conda install --yes --file ./configs/requirements.txt, <br>
-</div>
+```
+conda create --name hdaagt python=3.10 -y
+source activate hdaagt
+conda install --yes --file ./configs/requirements.txt
+```
 
 ## Model Configuration
 <div style="text-align: justify;">
