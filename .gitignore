@@ -1,11 +1,5 @@
-Pickled/
-TGB/
-pytorch_geometric_temporal/
 brokentraj.csv
-dataset.pt
-minGPT/
-encdec/
-Processed/
+Processed/17/
 sinD/
 Other/
 # Add new files to the .gitignore file on main
@@ -15,4 +9,4 @@ Other/
 *.log
 *.txt
 *.json
-ModifiedData.csv
+data/ModifiedData.csv

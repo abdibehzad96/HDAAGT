@@ -10,7 +10,7 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
     eos = config['eos']
     train_loss, prev_average_loss, patience= [],  10000000.0, 0
     trainFDE, trainADE = [], []
-
+    Best_Model = []
     for epoch in range(config['epochs']):
         model.train()
         epoch_losses, epoch_ADE, epoch_FDE = [], [], []
@@ -26,7 +26,7 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
             torch.nn.utils.clip_grad_norm_(model.parameters(), config['clip'])
             optimizer.step()
             with torch.no_grad():
-                _, ADE, FDE = Find_topk_selected_words(outputs, Target)
+                _, ADE, FDE = Find_topk_selected_words(outputs[:,1:-1], Target[:,1:-1]) # sos and eos are not included in the loss
             epoch_losses.append(loss.item())
             epoch_ADE.append(ADE)
             epoch_FDE.append(FDE)
@@ -44,6 +44,7 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
         if train_loss[-1] < prev_average_loss: # checkpoint update
             prev_average_loss = train_loss[-1]  # Update previous average loss
             patience = 0
+            Best_Model = model
         elif patience > patience_limit:
                 savelog(f'early stopping, Patience lvl1 , lvl2 {patience}', config['ct'])
                 break
@@ -52,7 +53,7 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
             _, ADE, FDE = test_model(model, test_loader, config)
             savelog(f"During Training, Test ADE: {ADE :.2f}, FDE: {FDE :.2f}", config['ct'])
             model.train()
-    return train_loss, trainADE, trainFDE
+    return Best_Model, train_loss, trainADE, trainFDE
 
 
 def test_model(model, test_loader, config):

@@ -2,8 +2,9 @@
 
 # General startup parameters
 model_name: "HDAAGT"
-sos: [10,1016,1016,7,7,7,7] # This is the start of the sequence
-eos: [11,1020,1020,8,8,8,8] # This is the end of the sequence
+verbal: false # If true, it will print the configs parameters
+sos: [10,1016,1016,7,7,7,7] # This is the start of the sequence for categorical variables
+eos: [11,1020,1020,8,8,8,8] # This is the end of the sequence for categorical variables
 detection_path: 'data/Fisheye-MARC.csv'
 Zoneconf_path: 'configs/ZoneConf.yaml'
 generate_data: false #  Add class by loading the CSV file
