@@ -1,17 +1,14 @@
 Pickled/
-RawData/
 TGB/
 pytorch_geometric_temporal/
 brokentraj.csv
 dataset.pt
 minGPT/
-logs/
 encdec/
 Processed/
 sinD/
 Other/
 # Add new files to the .gitignore file on main
-*.csv
 *.pt
 *.pth
 *.pkl
