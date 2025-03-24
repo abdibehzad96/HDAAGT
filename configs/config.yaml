@@ -11,6 +11,7 @@ Load_Model: false # It's for creating model from scratch
 Load_Model_Path: 'Processed/17/LR10_HS256_NL1_BS128 02-04-13-46Bestmodel.pth' # The path of the model to be loaded
 Train: true # It's for training the model with the prepared data
 Test: true # It's for testing the model with the prepared data
+Test_during_training: true # It's for testing the model during training
 
 
 # Model Architecture parameters
@@ -53,6 +54,6 @@ learning_rate: !!float 4e-04
 schd_stepzise: 15
 gamma: 0.15
 epochs: 45
-patience_limit: 20
+patience_limit: 5
 clip: 0.25
-batch_size: 32
+batch_size: 128

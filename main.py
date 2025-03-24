@@ -10,7 +10,7 @@ import datetime
 
 # The rest is HDAAGT specific imports
 from utilz.utils import *
-from models.train_test import *
+from train_test import *
 from models.HGAAGT import *
 
 if __name__ == '__main__':
@@ -25,10 +25,10 @@ if __name__ == '__main__':
         config = yaml.safe_load(file)
     
     ZoneConf = Zoneconf(config['Zoneconf_path'])
-    # config needs more information to be passed to the model
+    # config non-indipendent parameters
     config['NFeatures']= len(config["Columns_to_keep"]) # This goes to the data preparation process
     config["input_size"] = config["NFeatures"] + 9 + 8 # This goes to the model, we add couple of more features to the input
-    config["output_size"] = len(config['Columns_to_Predict']) # The number of columns to predict
+    config["output_size"] = len(config['xy_indx']) # The number of columns to predict
     config['device'] = device
     config['ct'] = ct
     log_code = f"Learning rate: {config['learning_rate']}, Hidden size: {config['hidden_size']}, Batch size: {config['batch_size']}"
@@ -79,12 +79,12 @@ if __name__ == '__main__':
     if config['Train']:
         savelog(f"The number of learnable parameter is {count_parameters(model=model)} !", ct)
         print(f"Learning rate: {config['learning_rate']}, Hidden size: {config['hidden_size']}, Batch size: {config['batch_size']}")
-        train_loss, trainADE, trainFDE = train_model(model, optimizer, criterion, scheduler, train_loader, config)
+        train_loss, trainADE, trainFDE = train_model(model, optimizer, criterion, scheduler, train_loader,test_loader, config)
         savelog(f"{log_code} with Avg loss of {train_loss[-1]}, ADE of {trainADE[-1]}, FDE of {trainFDE[-1]}", f"summary {ct}")
         if train_loss[-1] < 1.5:
             savelog(f"Saving result of {log_code}", ct)
-            torch.save(model, os.path.join(cwd,'Processed', log_code + 'Bestmodel.pth'))
-            torch.save(train_loss, os.path.join(cwd,'Pickled', log_code + 'epoch_losses.pt'))
+            torch.save(model, os.path.join(cwd,'Processed', 'Trained_Model.pth'))
+            torch.save(train_loss, os.path.join(cwd,'Pickled', 'epoch_losses.pt'))
         savelog(f"Training finished for {ct}!", ct)
 
     if config['Test']: # If not training, then test the model

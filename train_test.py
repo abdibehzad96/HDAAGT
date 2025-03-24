@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 from utilz.utils import *
-from .modules import *
+from models.modules import *
 
-def train_model(model, optimizer, criterion, scheduler, train_loader, config):
+def train_model(model, optimizer, criterion, scheduler, train_loader, test_loader, config):
     print("Training the model ...")
     patience_limit = config['patience_limit']
     sos = config['sos']
@@ -22,10 +22,11 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, config):
             Target = attach_sos_eos(Target[:,:,:, config['xy_indx']], sos[:, config['xy_indx']], eos[:,config['xy_indx']])
             outputs = model(Scene, Scene_mask, Adj_Mat)
             loss = criterion(outputs.reshape(-1, 1024), Target.reshape(-1).long())
-            _, ADE, FDE = Find_topk_selected_words(outputs, Target)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), config['clip'])
             optimizer.step()
+            with torch.no_grad():
+                _, ADE, FDE = Find_topk_selected_words(outputs, Target)
             epoch_losses.append(loss.item())
             epoch_ADE.append(ADE)
             epoch_FDE.append(FDE)
@@ -47,6 +48,10 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, config):
                 savelog(f'early stopping, Patience lvl1 , lvl2 {patience}', config['ct'])
                 break
         patience += 1
+        if config['Test_during_training'] and epoch % 5 == 3:
+            _, ADE, FDE = test_model(model, test_loader, config)
+            savelog(f"During Training, Test ADE: {ADE :.2f}, FDE: {FDE :.2f}", config['ct'])
+            model.train()
     return train_loss, trainADE, trainFDE
 
 
@@ -76,6 +81,6 @@ def test_model(model, test_loader, config):
         Avg_ADE, Avg_FDE = Avg_ADE/len(test_loader), Avg_FDE/len(test_loader)
         log= f"ADE is : {Avg_ADE:.3f} px \n FDE is: {Avg_FDE:.3f} px \n Inference time: {1000*Avg_inference_time:.3f} ms"
         savelog(log, config['ct'])
-        return Topk_Selected_words, ADE, FDE
+        return Topk_Selected_words, Avg_ADE, Avg_FDE
 if __name__ == "__main__":
     print("Yohoooo, Ran a Wrong Script!")

@@ -10,33 +10,42 @@ class Positional_Encoding_Layer(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
         self.xy_indx = xy_indx
+
+        # Embeddings of the positional features
         self.Postional_embeddings = nn.ModuleList()
         for i in range(len(xy_indx)):
             self.Postional_embeddings.append(nn.Embedding(pos_embedding_dict_size[i], pos_embedding_dim[i], padding_idx=0))
-    
-        # self.Temporal = nn.LSTM(2* hidden_size,  hidden_size, num_att_heads, batch_first=True)
+
+        # Temporal Convolution and Positional Attention layers
         self.TemporalConv = TemporalConv(2*hidden_size)
         self.Position_Att = nn.MultiheadAttention(embed_dim= 3*hidden_size, num_heads=num_att_heads, batch_first=True)
         self.Pos_FF = FeedForwardNetwork(d_model= 3*hidden_size, out_dim=3*hidden_size)
         self.Position_Rezero = nn.Parameter(torch.zeros(3*hidden_size))
+
+
         # The recent results showed that placing DAAG layer here is more efficient than putting it after the Encoder
         self.DAAG = DAAG_Layer(in_features=2*hidden_size, out_features=2*hidden_size, n_heads= num_att_heads, n_nodes = nnodes, concat=True)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, Scene, Scene_mask, adj):
         B, SL, Nnodes, _ = Scene.size()
+
+        # Embedding the positional features
         positional_embedding = []
         for n, indx in enumerate(self.xy_indx):
             positional_embedding.append(self.Postional_embeddings[n](Scene[:,:,:,indx].long()))
         Pos_embd = torch.cat(positional_embedding, dim=-1)
+
+        # DAAG layer
         Pos_embd = self.DAAG(Pos_embd, adj) 
         Pos_embd = Pos_embd.permute(0,2,1,3).reshape(B*Nnodes, SL, 2*self.hidden_size)
 
-        # Leaky_Residual , _ = self.TeTemporalConvmporal(Pos_embd)
+        # Leaky_Residual 
         Leaky_residual = self.TemporalConv(Pos_embd)
         Pos_embd= torch.cat((Pos_embd,Leaky_residual), dim=-1)
-        Pos_embd = Pos_embd + positional_encoding(Pos_embd, 3*self.hidden_size)
 
+        # Positional Encoding + Attention
+        Pos_embd = Pos_embd + positional_encoding(Pos_embd, 3*self.hidden_size)
         Pos_embd_att = self.Position_Att(Pos_embd , Pos_embd , Pos_embd, need_weights=False, key_padding_mask = Scene_mask)[0] #key_padding_mask = src_mask
         Pos_embd = self.Position_Rezero*Pos_embd_att + Pos_embd
         Pos_embd = self.dropout(Pos_embd)
@@ -49,10 +58,13 @@ class Traffic_Encoding_Layer(nn.Module):
         self.hidden_size = hidden_size
         self.Traffic_indx = Traffic_indx
         self.Linear_indx = Linear_indx
+
+        # Embeddings of the Traffic features
         self.Traffic_embeddings = nn.ModuleList()
         for i in range(len(Traffic_indx)):
             self.Traffic_embeddings.append(nn.Embedding(trf_embedding_dict_size[i], trf_embedding_dim[i], padding_idx=0))
-        # For the Linear embeddings, we consider the followinng fully connected layers
+        
+        # For the Linear features, we consider the followinng fully connected layers
         self.LE_LN1 = nn.LayerNorm(Num_linear_inputs)
         self.Linear_Embedding1 = nn.Linear(Num_linear_inputs, hidden_size)
         self.LE_LN2 = nn.LayerNorm(hidden_size)
@@ -60,7 +72,7 @@ class Traffic_Encoding_Layer(nn.Module):
         self.LE_LN3 = nn.LayerNorm(hidden_size)
         self.Linear_Embedding3 = nn.Linear(hidden_size, hidden_size)
 
-        # After the embeddings, we concatenate the embeddings and pass them through the Attention layer
+        # Traffic Attention
         self.Traffic_Att = nn.MultiheadAttention(embed_dim= 3*hidden_size, num_heads=num_att_heads, batch_first=True)
         self.Traffic_FF = FeedForwardNetwork(d_model=3* hidden_size, out_dim=3* hidden_size)
         self.LE_Rezero2 = nn.Parameter(torch.zeros(hidden_size))
@@ -70,25 +82,27 @@ class Traffic_Encoding_Layer(nn.Module):
 
     def forward(self, Scene, Scene_mask, Leaky_residual):
         B, SL, Nnodes, _ = Scene.size()
+
+        # Embedding the Traffic features
         Traffic_embedding = []
         for n, indx in enumerate(self.Traffic_indx):
             Traffic_embedding.append(self.Traffic_embeddings[n](Scene[:,:,:,indx].long()))
         Trf_embd = torch.cat(Traffic_embedding, dim=-1)
-
+        # Linear Embedding
         Lin_embd = self.LE_LN1(Scene[:,:,:,self.Linear_indx])
         Lin_embd1 = self.Linear_Embedding1(Lin_embd)
         Lin_embd2 = self.LE_Rezero2* self.Linear_Embedding2(F.leaky_relu(Lin_embd1)) + Lin_embd1
         Lin_embd = self.LE_Rezero3* self.Linear_Embedding3(F.leaky_relu(Lin_embd2)) + Lin_embd2
-
         Trf_embd = torch.cat((Trf_embd, Lin_embd), dim=-1).reshape(B*Nnodes, SL, 2*self.hidden_size)
         Trf_embd = torch.cat((Trf_embd, Leaky_residual), dim =-1)
-        Trf_embd = self.dropout(Trf_embd)
         
+        
+        # Traffic Attention
         Trf_embd = Trf_embd + positional_encoding(Trf_embd, 3*self.hidden_size)
-
         Trf_embd_att = self.Traffic_Att(Trf_embd, Trf_embd, Trf_embd, key_padding_mask = Scene_mask)[0] #key_padding_mask = src_mask
         Trf_embd = self.dropout(self.Traffic_Rezero*Trf_embd_att + Trf_embd)
         Trf_embd = self.Traffic_FF(Trf_embd)
+        Trf_embd = self.dropout(Trf_embd)
         return Trf_embd
 
 class Mixed_Attention_Layer(nn.Module):
@@ -101,6 +115,7 @@ class Mixed_Attention_Layer(nn.Module):
         self.dropout = nn.Dropout(0.25)
         
     def forward(self, Pos_embd, Traffic_embd, Scene_mask):
+        # Cross Attention
         Att_mixed = self.Mixed_Att(Pos_embd, Traffic_embd, Traffic_embd, key_padding_mask = Scene_mask, need_weights=False)[0] #key_padding_mask = src_mask
         Mixed = self.Mixed_Rezero*Att_mixed + Pos_embd
         Mixed_FF = self.Mixed_FF(Mixed)
