@@ -29,7 +29,7 @@ output_dict_size: 1024
 # Dataset parameters
 Headers: ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
 Columns_to_keep: [11,2,3,7,8,9,10] #['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
-trf_embedding_dict_size: [12, 9, 9, 9, 9] # size of the Embedding for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
+trf_embedding_dict_size: [12, 9, 9, 9, 9] # size of the embedding dictionary for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
 trf_embedding_dim: [32, 24, 24, 24, 24] # size of the model dimension for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
 pos_embedding_dict_size: [1024, 1024]
 pos_embedding_dim: [128, 128]

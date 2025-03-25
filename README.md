@@ -49,6 +49,15 @@ python main.py --config <path to config.yaml>
 ```
 For both training and testing, the **Train** and **Test** values in the configuration file must be set. If both are enabled, testing will be performed at the end of the training session. Additionally, you can evaluate the model's performance on the test data during training by setting **Test_during_training** to `true`.
 
+## Model Output
+The expected output dimension of the model is **[B, SL, N, xy]**, where:  
+
+- **B**: Batch size.  
+- **SL**: Sequence length.  
+- **N**: Number of agents on the road (up to `Nusers`).  
+- **xy**: Predicted x and y coordinates. 
+
+The image below illustrates the historical trajectories of road agents (represented as lines), along with their actual final positions (shown as circles) and predicted final positions (depicted as rectangles) after 3 seconds.
 <p align="center"><img width="50%" src="data/Prediction.jpg" style="object-fit: cover;  background-color: white; margin: auto;"/></p>
 
 The best-trained model can be found in the [Pickled/best_trained_model.pth](./Pickled/best_trained_model.pth) directory.
@@ -83,13 +92,13 @@ Number of trajectories recorded in the Fisheye-MARC:
 | **North** | 20 | 69 | 23 | 112 |
 | **West** | 20 | 20 |80 | 120 |
 | **Total** | 252 | 113 | 91 | x |
-| | | | |
+
 
 Summary of information available on Fisheye-
 MARC:
 
 | **Fisheye-MARC** | **Value** |
-|----------|----------|
+|:----------|:----------|
 | **Total tracks** | 456 |
 | **Average tracks length** | 249.5 |
 | **Frame rate** | 10 fps |
@@ -97,18 +106,18 @@ MARC:
 | **Camera height** | 9.5 m |
 | **No. zones** | 9 |
 | **Image resolution** | 1024*1024 |
-| | | | |
 
 
-## Dataset Preperation
 
+## Dataset Preperation/Input Embedding
 
-# 
-Headers: ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
-Columns_to_keep: [11,2,3,7,8,9,10] #['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
-trf_embedding_dict_size: [12, 9, 9, 9, 9] # size of the Embedding for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
-trf_embedding_dim: [32, 24, 24, 24, 24] # size of the model dimension for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
-pos_embedding_dict_size: [1024, 1024]
-pos_embedding_dim: [128, 128]
-xy_indx: [1, 2] # the index of x and y  of the Columns_to_Keep used for speed calculation function
-Traffic_indx: [0, 3, 4, 5, 6]
+The code allows you to select specific columns for preprocessing and embedding. The `Columns_to_keep` parameter, defined as an array of column index numbers in the configuration file, determines which columns are used.  
+
+Additionally, you must specify which indices within `Columns_to_keep` correspond to **Positional Embedding** using `xy_indx` and which ones correspond to **Traffic Embedding** using `Traffic_indx`.  
+
+The following parameters configure the embedding layers:  
+
+- **trf_embedding_dict_size**: Embedding dictionary size for `Traffic_indx`.  
+- **trf_embedding_dim**: Embedding dimension for `Traffic_indx`.  
+- **pos_embedding_dict_size**: Embedding dictionary size for `xy_indx`.  
+- **pos_embedding_dim**: Embedding dimension for `xy_indx`.
