@@ -11,7 +11,7 @@ import argparse
 # The rest is HDAAGT specific imports
 from utilz.utils import *
 from train_test import *
-from models.HGAAGT import *
+from models.HDAAGT import *
 
 if __name__ == '__main__':
     # If the model is run through terminal

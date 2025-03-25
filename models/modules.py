@@ -78,13 +78,7 @@ class DAAG_Layer(nn.Module):
         self.Rezero = nn.Parameter(torch.zeros(self.n_hidden))
         self.LN = nn.LayerNorm(n_nodes)
     def forward(self, h: torch.Tensor, Adj_mat: torch.Tensor):
-        r"""
-        * `h`, $\mathbf{h}$ is the input node embeddings of shape `[n_nodes, in_features]`.
-        * `adj_mat` is the adjacency matrix of shape `[n_nodes, n_nodes, n_heads]`.
-        We use shape `[n_nodes, n_nodes, 1]` since the adjacency is the same for each head.
-        Adjacency matrix represent the edges (or connections) among nodes.
-        `adj_mat[i][j]` is `True` if there is an edge from node `i` to node `j`.
-        """
+
 
         # Number of nodes
         B, SL, n_nodes, _ = h.shape
