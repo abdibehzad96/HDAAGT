@@ -1,6 +1,7 @@
 brokentraj.csv
 Processed/
 sinD/
+misc/
 Other/
 # Add new files to the .gitignore file on main
 *.pt
