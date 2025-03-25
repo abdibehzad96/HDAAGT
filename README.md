@@ -5,11 +5,7 @@
 <div style="text-align: justify;">
 Heterogeneous Decision-Aware Attention Graph Transformer for Scene-Centric Trajectory Predicton (HDAAGT): A non-autoregressive, encoder-only transformer model for vehicle trajectory prediction. HDAAGT integrates lane positioning, traffic light states, and vehicle kinematics, enabling a decision-aware graph attention mechanism that models agent-agent and agent-environment interactions. Decision-Aware Attention Graph(DAAG) network models the spatiotemporal influence of all neighboring road agents with and generates the decisions token for all road agents simultaneously.
 </div>
-<!-- 
-<figure style="text-align: center; background-color: white;width: 300px; margin: auto; ">
-  <img src="models/DAAG.png" alt="DAAG">
-  <figcaption style="font-style: italic; font-size: 14px; color: black;">Overview of the Decision-Aware Attention Graph Network.</figcaption>
-</figure> -->
+</br>
 
 <p align="center"><img width="60%" src="models/DAAG.png" style="object-fit: cover;  background-color: white; margin: auto;"/></p>
 
@@ -30,12 +26,11 @@ conda install --yes --file ./configs/requirements.txt
 ```
 
 ## Model Configuration
-<div style="text-align: justify;">
 In the [configs/config.yaml](./configs/config.yaml) directory, you will find all the necessary parameters to train or test the model. Below is a breakdown of some key parameters to help you get started:
 
 * **detection_path**: Specifies the path to the Fisheye-MARC CSV file.
 * **generate_data**: [Bool] When set to `true`, prepares the Fisheye-MARC data for training/testing.
-* **Zoneconf_path**: Path to the ZoneConf.yaml file used for dataset generation.
+* **Zoneconf_path**: Path to the `ZoneConf.yaml` file used for dataset generation.
 
 * **Load_Model**: [Bool] When set to `true`, loads a previously saved model.
 * **Load_Model_Path**: Path to the previously saved model.
@@ -44,21 +39,21 @@ In the [configs/config.yaml](./configs/config.yaml) directory, you will find all
 * **Test_during_training**: [Bool] When set to `true`, tests the model every 5 epochs during training.
 * **verbal**: [Bool] When set to `true`, prints the configuration parameters to the console.
 
-</div>
 
 ## Model Training/Testing
-<div style="text-align: justify;">
-After configuring the settings in the configuration file, you can run the model either by executing the `main.py` file directly or by running the following command in the terminal:
-</div>
 
-<div style="border: 1px solid #444; padding: 10px; margin: 5px; background-color: #2f363d; border-radius: 6px; color: white;">
+After configuring the settings in the configuration file, you can run the model either by executing the `main.py` file directly or by running the following command in the terminal:
+
+```
 python main.py --config &lt;path to config.yaml&gt;
-</div>
+```
+For both training and testing, the **Train** and **Test** values in the configuration file must be set. If both are enabled, testing will be performed at the end of the training session. Additionally, you can evaluate the model's performance on the test data during training by setting **Test_during_training** to `true`.
+
+<p align="center"><img width="50%" src="data/Prediction.jpg" style="object-fit: cover;  background-color: white; margin: auto;"/></p>
 
 The best-trained model can be found in the [Pickled/best_trained_model.pth](./Pickled/best_trained_model.pth) directory.
 
 # Fisheye-MARC dataset
-<div style="text-align: justify;">
 The Fisheye-MARC dataset contains vehicle trajectory data collected from a fisheye camera installed at an intersection. The `Fisheye-MARC.csv` file includes the following columns:
 
 - **Frame**: Frame number in the video sequence
@@ -73,30 +68,47 @@ The Fisheye-MARC dataset contains vehicle trajectory data collected from a fishe
 - **Traffic Light 3**: State of the traffic light of the Westbound vehicles (Located at the Eastb)
 - **Traffic Light 4**: State of the traffic light of the Southbound vehicles (Located at the North)
 - **Zone**: Zone information for the vehicle
-</div>
+
 
 Traffic light states are represented as follows: 1 for green, 2 for yellow, 3 for red, 4 for a green left turn, and 5 for a yellow left turn.
-<div style="display: flex; justify-content: center; gap: 10px;">
-<figure style="text-align: center; background-color: white;width: 370px; margin: auto; ">
-  <img src="data/Fisheye-MARC.JPG" alt="Fisheye-MARC">
-  <figcaption style="font-style: italic; font-size: 14px; color: black;"> A scene recorded in the Fisheye-MARC dataset.</figcaption>
-</figure> <br>
-<figure style="text-align: center; background-color: white;width: 370px; margin: auto; ">
-  <img src="data/Trajectories.jpg" alt="Fisheye-MARC">
-  <figcaption style="font-style: italic; font-size: 14px; color: black;"> All trajectories recorded in the Fisheye-MARC.</figcaption>
-</figure> <br>
-</div><br />
+<p align="center"><img width="45%" src="data/Fisheye-MARC.JPG" style="object-fit: cover;  background-color: white; margin: 6px;"/><img width="45%" src="data/Trajectories.jpg" style="object-fit: cover;  background-color: white; margin: 5px;"/></p>
+
 
 Number of trajectories recorded in the Fisheye-MARC:
-<div style="text-align: center;">
 
-| **Direction** | **Straight** | **Left Turn** | **Right Turn** |
-|----------|----------|----------|----------|
-| **East** | 77 | 17 | 45|
-| **West** | 134 | 6 | 13 |
-| **North** | 20 | 69 | 23 |
-| **West** | 20 | 20 |80 |
+| **Direction** | **Straight** | **Left Turn** | **Right Turn** | **Total** |
+|----------|----------|----------|----------|----------|
+| **East** | 77 | 17 | 45| 139 |
+| **West** | 134 | 6 | 13 | 153 |
+| **North** | 20 | 69 | 23 | 112 |
+| **West** | 20 | 20 |80 | 120 |
+| **Total** | 252 | 113 | 91 | x |
 | | | | |
 
-</div>
+Summary of information available on Fisheye-
+MARC:
 
+| **Fisheye-MARC** | **Value** |
+|----------|----------|
+| **Total tracks** | 456 |
+| **Average tracks length** | 249.5 |
+| **Frame rate** | 10 fps |
+| **Time of the day** | 7-8 AM |
+| **Camera height** | 9.5 m |
+| **No. zones** | 9 |
+| **Image resolution** | 1024*1024 |
+| | | | |
+
+
+## Dataset Preperation
+
+
+# 
+Headers: ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
+Columns_to_keep: [11,2,3,7,8,9,10] #['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
+trf_embedding_dict_size: [12, 9, 9, 9, 9] # size of the Embedding for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
+trf_embedding_dim: [32, 24, 24, 24, 24] # size of the model dimension for ['Zone','BBx', 'BBy','Tr1', 'Tr2', 'Tr3', 'Tr4']
+pos_embedding_dict_size: [1024, 1024]
+pos_embedding_dim: [128, 128]
+xy_indx: [1, 2] # the index of x and y  of the Columns_to_Keep used for speed calculation function
+Traffic_indx: [0, 3, 4, 5, 6]
