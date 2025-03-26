@@ -20,9 +20,7 @@ git clone https://github.com/abdibehzad96/HDAAGT.git
 First, we'll create a conda environment to hold the dependencies
 
 ```
-conda create --name hdaagt python=3.10 -y
-source activate hdaagt
-conda install --yes --file ./configs/requirements.txt
+conda env create -f config/requirements.yml
 ```
 
 ## Model Configuration

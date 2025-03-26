@@ -1,0 +1,14 @@
+
+name: hdaagt
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.12.3
+  - torch=2.5.1
+  - cudatoolkit=12.4
+  - pandas
+  - numpy
+  - pyyaml
+  - shapely
