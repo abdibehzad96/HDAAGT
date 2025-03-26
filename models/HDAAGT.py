@@ -58,6 +58,7 @@ class Traffic_Encoding_Layer(nn.Module):
         self.hidden_size = hidden_size
         self.Traffic_indx = Traffic_indx
         self.Linear_indx = Linear_indx
+        self.Linear_Embedding_dim = 2*hidden_size - sum(trf_embedding_dim)
 
         # Embeddings of the Traffic features
         self.Traffic_embeddings = nn.ModuleList()
@@ -66,17 +67,17 @@ class Traffic_Encoding_Layer(nn.Module):
         
         # For the Linear features, we consider the followinng fully connected layers
         self.LE_LN1 = nn.LayerNorm(Num_linear_inputs)
-        self.Linear_Embedding1 = nn.Linear(Num_linear_inputs, hidden_size)
-        self.LE_LN2 = nn.LayerNorm(hidden_size)
-        self.Linear_Embedding2 = nn.Linear(hidden_size, hidden_size)
-        self.LE_LN3 = nn.LayerNorm(hidden_size)
-        self.Linear_Embedding3 = nn.Linear(hidden_size, hidden_size)
+        self.Linear_Embedding1 = nn.Linear(Num_linear_inputs, self.Linear_Embedding_dim)
+        self.LE_LN2 = nn.LayerNorm(self.Linear_Embedding_dim)
+        self.Linear_Embedding2 = nn.Linear(self.Linear_Embedding_dim, self.Linear_Embedding_dim)
+        self.LE_LN3 = nn.LayerNorm(self.Linear_Embedding_dim)
+        self.Linear_Embedding3 = nn.Linear(self.Linear_Embedding_dim, self.Linear_Embedding_dim)
 
         # Traffic Attention
         self.Traffic_Att = nn.MultiheadAttention(embed_dim= 3*hidden_size, num_heads=num_att_heads, batch_first=True)
         self.Traffic_FF = FeedForwardNetwork(d_model=3* hidden_size, out_dim=3* hidden_size)
-        self.LE_Rezero2 = nn.Parameter(torch.zeros(hidden_size))
-        self.LE_Rezero3 = nn.Parameter(torch.zeros(hidden_size))
+        self.LE_Rezero2 = nn.Parameter(torch.zeros(self.Linear_Embedding_dim))
+        self.LE_Rezero3 = nn.Parameter(torch.zeros(self.Linear_Embedding_dim))
         self.Traffic_Rezero = nn.Parameter(torch.zeros(3*hidden_size))
         self.dropout = nn.Dropout(dropout)
 
@@ -130,7 +131,7 @@ class Encoder_DAAG(nn.Module):
         num_heads = config['num_heads']
         self.xy_indx = config['xy_indx']
         self.Traffic_indx = config['Traffic_indx']
-        self.Linear_indx = torch.arange(config['NFeatures'], config['input_size'])
+        self.Linear_indx = [x for x in config['Columns_to_keep'] if x not in self.xy_indx + self.Traffic_indx]
         self.Positional_Encoding_Layer = Positional_Encoding_Layer(hidden_size = self.hidden_size, num_att_heads = num_heads, 
                                                                    xy_indx = self.xy_indx, pos_embedding_dim = config['pos_embedding_dim'], 
                                                                    pos_embedding_dict_size = config['pos_embedding_dict_size'], nnodes = config['Nnodes'])
