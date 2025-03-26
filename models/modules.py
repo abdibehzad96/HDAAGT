@@ -105,11 +105,14 @@ class DAAG_Layer(nn.Module):
         
 
 class TemporalConv(nn.Module):
-    def __init__(self, hidden_size, no = 1):
+    def __init__(self, hidden_size, sl):
         super(TemporalConv, self).__init__()
-        self.conv1 = nn.Conv1d(17,  17, 7, 2, 3)
-        self.conv2 = nn.Conv1d(8,  17, 7, 2, 3)
-        self.conv3 = nn.Conv1d(6,  17, 7, 2, 3)
+        c1 = sl//2 +1
+        c2 = sl//3 +1
+
+        self.conv1 = nn.Conv1d(sl+2,  sl+2, 7, 2, 3)
+        self.conv2 = nn.Conv1d(c1,  sl+2, 7, 2, 3)
+        self.conv3 = nn.Conv1d(c2,  sl+2, 7, 2, 3)
         self.out = nn.Linear(hidden_size//2, hidden_size//2)
         self.LN = nn.LayerNorm(hidden_size)
         self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))

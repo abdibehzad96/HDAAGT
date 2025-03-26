@@ -6,7 +6,7 @@ from models.modules import *
 
 
 class Positional_Encoding_Layer(nn.Module):
-    def __init__(self, hidden_size, num_att_heads, xy_indx, pos_embedding_dim, pos_embedding_dict_size, nnodes, dropout = 0.2):
+    def __init__(self, hidden_size, num_att_heads, xy_indx, pos_embedding_dim, pos_embedding_dict_size, nnodes, sl, dropout = 0.2):
         super().__init__()
         self.hidden_size = hidden_size
         self.xy_indx = xy_indx
@@ -17,7 +17,7 @@ class Positional_Encoding_Layer(nn.Module):
             self.Postional_embeddings.append(nn.Embedding(pos_embedding_dict_size[i], pos_embedding_dim[i], padding_idx=0))
 
         # Temporal Convolution and Positional Attention layers
-        self.TemporalConv = TemporalConv(2*hidden_size)
+        self.TemporalConv = TemporalConv(2*hidden_size, sl)
         self.Position_Att = nn.MultiheadAttention(embed_dim= 3*hidden_size, num_heads=num_att_heads, batch_first=True)
         self.Pos_FF = FeedForwardNetwork(d_model= 3*hidden_size, out_dim=3*hidden_size)
         self.Position_Rezero = nn.Parameter(torch.zeros(3*hidden_size))
@@ -134,7 +134,7 @@ class Encoder_DAAG(nn.Module):
         self.Linear_indx = [x for x in config['Columns_to_keep'] if x not in self.xy_indx + self.Traffic_indx]
         self.Positional_Encoding_Layer = Positional_Encoding_Layer(hidden_size = self.hidden_size, num_att_heads = num_heads, 
                                                                    xy_indx = self.xy_indx, pos_embedding_dim = config['pos_embedding_dim'], 
-                                                                   pos_embedding_dict_size = config['pos_embedding_dict_size'], nnodes = config['Nnodes'])
+                                                                   pos_embedding_dict_size = config['pos_embedding_dict_size'], nnodes = config['Nnodes'], sl = config['sl']//config['dwn_smple'])
         self.Traffic_Encoding_Layer = Traffic_Encoding_Layer(hidden_size = self.hidden_size,
                                                              num_att_heads = num_heads, Traffic_indx = self.Traffic_indx, trf_embedding_dim = config['trf_embedding_dim'],
                                                              trf_embedding_dict_size = config['trf_embedding_dict_size'], Num_linear_inputs = len(self.Linear_indx),
