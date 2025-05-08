@@ -9,7 +9,7 @@ detection_path: 'data/Fisheye-MARC.csv'
 Zoneconf_path: 'configs/ZoneConf.yaml'
 generate_data: false #  Add class by loading the CSV file
 Load_Model: false # It's for creating model from scratch
-Load_Model_Path: 'Processed/Bestmodel.pth' # The path of the model to be loaded
+Load_Model_Path: 'Processed/best_trained_model.pth' # The path of the model to be loaded
 Train: true # It's for training the model with the prepared data
 Test: true # It's for testing the model with the prepared data
 Test_during_training: true # It's for testing the model during training

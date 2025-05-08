@@ -53,6 +53,8 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
             _, ADE, FDE = test_model(model, test_loader, config)
             savelog(f"During Training, Test ADE: {ADE :.2f}, FDE: {FDE :.2f}", config['ct'])
             model.train()
+            print(f"Allocated memory: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
+            print(f"Reserved memory:  {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
     return Best_Model, train_loss, trainADE, trainFDE
 
 

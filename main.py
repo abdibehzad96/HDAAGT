@@ -93,7 +93,7 @@ if __name__ == '__main__':
         savelog(f"{log_code} with Avg loss of {train_loss[-1]}, ADE of {trainADE[-1]}, FDE of {trainFDE[-1]}", f"summary {ct}")
         if train_loss[-1] < 1.5:
             savelog(f"Saving result of {log_code}", ct)
-            torch.save(Best_Model, os.path.join(cwd,'Pickled', 'best_trained_model.pth'))
+            torch.save(Best_Model.state_dict(), os.path.join(cwd,'Pickled', 'best_trained_model.pth'))
             torch.save(train_loss, os.path.join(cwd,'Pickled', 'epoch_losses.pt'))
         savelog(f"Training finished for {ct}!", ct)
 
