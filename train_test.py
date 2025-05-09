@@ -16,10 +16,7 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
         epoch_losses, epoch_ADE, epoch_FDE = [], [], []
         for Scene, Target, Adj_Mat_Scene in train_loader: # Scene & Taget => [B, SL0, Nnodes, Features], Adj_Mat_Scene => [B, SL, Nnodes, Nnodes]
             optimizer.zero_grad()
-            Scene = attach_sos_eos(Scene, sos, eos)
-            Adj_Mat = torch.cat((torch.ones_like(Adj_Mat_Scene[:,:1]), Adj_Mat_Scene, torch.ones_like(Adj_Mat_Scene[:,:1])), dim=1)
-            Scene_mask = create_src_mask(Scene)
-            Target = attach_sos_eos(Target[:,:,:, config['xy_indx']], sos[:, config['xy_indx']], eos[:,config['xy_indx']])
+            Scene, Scene_mask, Adj_Mat, Target = prep_model_input(Scene, Adj_Mat_Scene,Target, sos, eos, config)
             outputs = model(Scene, Scene_mask, Adj_Mat)
             loss = criterion(outputs.reshape(-1, 1024), Target.reshape(-1).long())
             loss.backward()
@@ -53,8 +50,8 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
             _, ADE, FDE = test_model(model, test_loader, config)
             savelog(f"During Training, Test ADE: {ADE :.2f}, FDE: {FDE :.2f}", config['ct'])
             model.train()
-            print(f"Allocated memory: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
-            print(f"Reserved memory:  {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
+            # print(f"Allocated memory: {torch.cuda.memory_allocated() / 1024**2:.5f} MB")
+            # print(f"Reserved memory:  {torch.cuda.memory_reserved() / 1024**2:.5f} MB")
     return Best_Model, train_loss, trainADE, trainFDE
 
 
@@ -69,11 +66,9 @@ def test_model(model, test_loader, config):
         end_event = torch.cuda.Event(enable_timing=True)
         start_event.record()
         for Scene, Target, Adj_Mat_Scene in test_loader:
-            Scene = attach_sos_eos(Scene, sos, eos)
-            Adj_Mat = torch.cat((torch.ones_like(Adj_Mat_Scene[:,:1]), Adj_Mat_Scene, torch.ones_like(Adj_Mat_Scene[:,:1])), dim=1)
-            Scene_mask = create_src_mask(Scene)
+            Scene, Scene_mask, Adj_Mat, Target = prep_model_input(Scene, Adj_Mat_Scene,Target, sos, eos, config)
             Pred_target = model(Scene, Scene_mask,Adj_Mat)
-            Target = Target[:,:,:, config['xy_indx']]
+            Target = Target[:,1:-1,:, config['xy_indx']]
             Topk_Selected_words, ADE, FDE = Find_topk_selected_words(Pred_target[:,1:-1], Target)
             test_size += Scene.size(0)
             Avg_ADE += ADE
@@ -85,5 +80,12 @@ def test_model(model, test_loader, config):
         log= f"ADE is : {Avg_ADE:.3f} px \n FDE is: {Avg_FDE:.3f} px \n Inference time: {1000*Avg_inference_time:.3f} ms"
         savelog(log, config['ct'])
         return Topk_Selected_words, Avg_ADE, Avg_FDE
+    
+def prep_model_input(Scene, Adj_Mat_Scene,Target, sos, eos, config):
+    Scene = attach_sos_eos(Scene, sos, eos)
+    Adj_Mat = torch.cat((torch.ones_like(Adj_Mat_Scene[:,:1]), Adj_Mat_Scene, torch.ones_like(Adj_Mat_Scene[:,:1])), dim=1)
+    Scene_mask = create_src_mask(Scene)
+    Target = attach_sos_eos(Target[:,:,:, config['xy_indx']], sos[:, config['xy_indx']], eos[:,config['xy_indx']])
+    return Scene, Scene_mask, Adj_Mat, Target
 if __name__ == "__main__":
     print("Yohoooo, Ran a Wrong Script!")

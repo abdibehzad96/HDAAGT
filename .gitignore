@@ -9,5 +9,7 @@ Other/
 *.pkl
 *.log
 *.json
+
 Notes.md
 data/ModifiedData.csv
+test.py

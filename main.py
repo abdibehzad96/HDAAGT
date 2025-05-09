@@ -84,7 +84,7 @@ if __name__ == '__main__':
         
     if config['Load_Model']:
         savelog("Loading model from the checkpoint", ct)
-        model = model.load_state_dict(torch.load(config['Load_Model_Path'])).to(device)
+        model.load_state_dict(torch.load(config['Load_Model_Path'], map_location=device))
 
     if config['Train']:
         savelog(f"The number of learnable parameter is {count_parameters(model=model)} !", ct)
@@ -93,8 +93,8 @@ if __name__ == '__main__':
         savelog(f"{log_code} with Avg loss of {train_loss[-1]}, ADE of {trainADE[-1]}, FDE of {trainFDE[-1]}", f"summary {ct}")
         if train_loss[-1] < 1.5:
             savelog(f"Saving result of {log_code}", ct)
-            torch.save(Best_Model.state_dict(), os.path.join(cwd,'Pickled', 'best_trained_model.pth'))
-            torch.save(train_loss, os.path.join(cwd,'Pickled', 'epoch_losses.pt'))
+            torch.save(Best_Model.state_dict(), os.path.join(cwd,'Pickled', f'best_trained_model{ct}.pth'))
+            torch.save(train_loss, os.path.join(cwd,'Pickled', f'epoch_losses{ct}.pt'))
         savelog(f"Training finished for {ct}!", ct)
 
     if config['Test']: # If not training, then test the model

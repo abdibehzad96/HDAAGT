@@ -8,8 +8,8 @@ eos: [11,1020,1020,8,8,8,8] # This is the end of the sequence for categorical va
 detection_path: 'data/Fisheye-MARC.csv'
 Zoneconf_path: 'configs/ZoneConf.yaml'
 generate_data: false #  Add class by loading the CSV file
-Load_Model: false # It's for creating model from scratch
-Load_Model_Path: 'Processed/best_trained_model.pth' # The path of the model to be loaded
+Load_Model: true # It's for creating model from scratch
+Load_Model_Path: 'Pickled/best_trained_model.pth' # The path of the model to be loaded
 Train: true # It's for training the model with the prepared data
 Test: true # It's for testing the model with the prepared data
 Test_during_training: true # It's for testing the model during training
@@ -57,4 +57,4 @@ gamma: 0.15
 epochs: 45
 patience_limit: 5
 clip: 0.25
-batch_size: 128
+batch_size: 64
