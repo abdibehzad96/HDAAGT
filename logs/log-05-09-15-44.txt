@@ -1,0 +1,6 @@
+
+Starting at:  15-44-52
+Loading data ...
+Train size: 31130, Test size: 310, Validation size: 0
+Creating model from scratch
+The number of learnable parameter is 3983774 !

@@ -1,0 +1,13 @@
+
+Starting at:  15-01-26
+Loading CSV file ...
+Train size: 352, Test size: 39, Validation size: 1 
+Randomly splitting the data
+Train size: 38830, Test size: 390, Validation size: 0
+Creating model from scratch
+The number of learnable parameter is 3982214 !
+Epoch [1/45], Loss: 1.57, ADE: 53.029, FDE: 60.66
+Epoch [2/45], Loss: 1.16, ADE: 16.648, FDE: 24.63
+Epoch [3/45], Loss: 1.07, ADE: 12.751, FDE: 20.09
+Epoch [4/45], Loss: 1.03, ADE: 10.795, FDE: 17.39
+Starting testing phase

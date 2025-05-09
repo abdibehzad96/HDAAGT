@@ -113,7 +113,7 @@ class Mixed_Attention_Layer(nn.Module):
         self.Mixed_FF = FeedForwardNetwork(d_model=hidden_size, out_dim=hidden_size)
         self.Mixed_Rezero = nn.Parameter(torch.zeros(hidden_size))
         self.Mixed_Rezero2 = nn.Parameter(torch.zeros(hidden_size))
-        self.dropout = nn.Dropout(0.25)
+        self.dropout = nn.Dropout(0.15)
         
     def forward(self, Pos_embd, Traffic_embd, Scene_mask):
         # Cross Attention
@@ -131,7 +131,7 @@ class Encoder_DAAG(nn.Module):
         num_heads = config['num_heads']
         self.xy_indx = config['xy_indx']
         self.Traffic_indx = config['Traffic_indx']
-        self.Linear_indx = [x for x in config['Columns_to_keep'] if x not in self.xy_indx + self.Traffic_indx]
+        self.Linear_indx = [x for x in list(range(config['input_size'])) if x not in self.xy_indx + self.Traffic_indx]
         self.Positional_Encoding_Layer = Positional_Encoding_Layer(hidden_size = self.hidden_size, num_att_heads = num_heads, 
                                                                    xy_indx = self.xy_indx, pos_embedding_dim = config['pos_embedding_dim'], 
                                                                    pos_embedding_dict_size = config['pos_embedding_dict_size'], nnodes = config['Nnodes'], sl = config['sl']//config['dwn_smple'])

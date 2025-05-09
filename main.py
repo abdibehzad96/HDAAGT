@@ -43,8 +43,8 @@ if __name__ == '__main__':
     if config['verbal']:
         for arg in config.items(): # Print the arguments to the log file
             savelog(f"{arg[0]} = {arg[1]}", ct)
-    config['sos'] = torch.cat((torch.tensor([10,1016,1016,7,7,7,7]) , torch.zeros(17)), dim=0).repeat(config['Nnodes'], 1).to(device)
-    config['eos'] = torch.cat((torch.tensor([11,1020,1020,8,8,8,8]), torch.zeros(17)), dim=0).repeat(config['Nnodes'],1).to(device)
+    config['sos'] = torch.cat((torch.tensor(config['sos']) , torch.zeros(17)), dim=0).repeat(config['Nnodes'], 1).to(device)
+    config['eos'] = torch.cat((torch.tensor(config['eos']), torch.zeros(17)), dim=0).repeat(config['Nnodes'],1).to(device)
 
     
     # Before Everything, make sure to assert all the parameters are correct, implement later

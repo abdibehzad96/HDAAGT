@@ -1,0 +1,11 @@
+
+Starting at:  14-28-23
+Loading data ...
+Train size: 38830, Test size: 390, Validation size: 0
+Creating model from scratch
+The number of learnable parameter is 3969350 !
+Epoch [1/45], Loss: 1.53, ADE: 51.836, FDE: 57.93
+Epoch [2/45], Loss: 1.10, ADE: 14.560, FDE: 22.62
+Epoch [3/45], Loss: 1.01, ADE: 10.628, FDE: 17.40
+Epoch [4/45], Loss: 0.96, ADE: 8.805, FDE: 14.69
+Starting testing phase

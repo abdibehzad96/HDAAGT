@@ -83,7 +83,7 @@ class DAAG_Layer(nn.Module):
         # Number of nodes
         B, SL, n_nodes, _ = h.shape
         Adj_mat = Adj_mat - torch.eye(n_nodes).to(Adj_mat.device).repeat(B, SL, 1, 1)
-        Adj_mat = Adj_mat.unsqueeze(-2) < 0.1
+        Adj_mat = Adj_mat.unsqueeze(-2) < 0.5
         q = self.linear_l(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         k = self.linear_r(-h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         v = self.linear_v(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)

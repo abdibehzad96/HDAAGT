@@ -1,0 +1,7 @@
+
+Starting at:  13-48-56
+Loading data ...
+Creating model from scratch
+Train size: 38830, Test size: 390, Validation size: 0
+Creating model from scratch
+Loading model from the checkpoint
