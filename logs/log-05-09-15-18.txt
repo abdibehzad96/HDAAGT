@@ -1,4 +1,0 @@
-
-Starting at:  15-18-46
-Loading data ...
-Train size: 38830, Test size: 390, Validation size: 0
