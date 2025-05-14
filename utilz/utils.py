@@ -344,5 +344,50 @@ def load_model(model, weight_path, ct):
         model.load_state_dict(checkpoint['state_dict'])
         return model
 
+def Scene_Process_plotting(Scenetst, Traffic_data, config):
+    Nnodes = config['Nnodes']
+    NFeatures = config['NFeatures']
+    sl = config['sl']
+    future = config['future']
+    Columns_to_keep = config['Columns_to_keep']
+
+    device = config['device']
+    Nusers = config['Nusers']
+    dwn_smple = config['dwn_smple']
+    scenelet_len = sl + future # Maximum number of frames in a scenelet
+    # scenelet_len = 10*60 # 60 seconds * 10 frames per second
+    Traffic_data = torch.tensor(Traffic_data.values, dtype=torch.float, device=device)
+    DFindx, DFindxtmp = 0, 0 # We sweep through the first frame to the last frame
+    IDs = []
+    Zones = []
+    Fr = []
+    Scene = []
+    for fr in range(int(min(Traffic_data[:,0])), int(max(Traffic_data[:,0]))):
+        DFindxtmp = DFindx
+        rows = torch.empty(0, NFeatures, device=device) # Nnodes and NFeatures are predefined fixed values
+        while Traffic_data[DFindx,0] == fr:
+            DFindx += 1
+
+        rows = Traffic_data[DFindxtmp:DFindx, Columns_to_keep] # We only keep the columns that we need
+        Fr.append(fr)  # We keep the track of the frame number
+        IDs.append(Traffic_data[DFindxtmp:DFindx, 1])
+        Zones.append(Traffic_data[DFindxtmp:DFindx, 11])
+        while rows.size()[0] < Nusers:  # This is to make sure that rows is [Nnodes, NFeatures]
+            rows = torch.cat((rows, torch.zeros(1, NFeatures, device=device)), dim=0)
+
+        Scene.append(rows)
+        if len(Scene) % scenelet_len == 0: # This only happens after each scenelet_len frames
+            Scenex = torch.stack(Scene, dim=0).to(device=device)
+            Scenex, Zonesx, IDsx, NObjs = ConsistensyCheck(Scenex, Zones, IDs, Nnodes, NFeatures)
+            Scenex= Scenetst.ExtractFeatures(Scenex) # Now we sort the agents to be on the same row in the whole Scene
+            Scenetst.addnew(Scenex[:sl:dwn_smple], Scenex[sl::dwn_smple], Zonesx, IDsx, Fr, NObjs) # We add the scenelet to the dataset
+            Scene = Scene[sl:] # We pass the second half frames
+            Fr = Fr[sl:] # We pass the second half frames
+            IDs = IDs[sl:]
+            Zones = Zones[sl:]
+    return Scenetst
+
+
+
 if __name__ == "__main__":
     print("Yohoooo, Ran a Wrong Script!")
