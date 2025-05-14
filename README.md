@@ -60,7 +60,7 @@ The image below illustrates the historical trajectories of road agents (represen
 
 The best-trained model can be found in the [Pickled/best_trained_model.pth](./Pickled/best_trained_model.pth) directory.
 
-[Watch Demo Video](./data/Prediction.mp4)
+[Watch Demo Video](./data/prediction.mp4)
 # Fisheye-MARC dataset
 The Fisheye-MARC dataset contains vehicle trajectory data collected from a fisheye camera installed at an intersection. The `Fisheye-MARC.csv` file includes the following columns:
 
