@@ -1,8 +1,0 @@
-
-Starting at:  16-57-54
-Loading CSV file ...
-Train size: 403, Test size: 44, Validation size: 1 
-Randomly splitting the data
-Train size: 22220, Test size: 220, Validation size: 0
-Creating model from scratch
-The number of learnable parameter is 4022294 !

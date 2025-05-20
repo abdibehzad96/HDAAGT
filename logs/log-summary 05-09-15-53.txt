@@ -1,2 +1,0 @@
-
-Learning rate: 0.0004, Hidden size: 128, Batch size: 128 with Avg loss of 0.9549140395199667, ADE of 7.377593994140625, FDE of 11.806158065795898

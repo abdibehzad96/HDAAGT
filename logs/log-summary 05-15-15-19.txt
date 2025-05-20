@@ -1,2 +1,0 @@
-
-Learning rate: 0.005, Hidden size: 128, Batch size: 128 with Avg loss of nan, ADE of nan, FDE of nan
