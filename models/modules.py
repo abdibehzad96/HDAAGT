@@ -32,7 +32,7 @@ class DAAG_Layer(nn.Module):
     def __init__(self, in_features: int, out_features: int, n_heads: int, n_nodes: int,
                 concat: bool = True,
                 dropout: float = 0.01,
-                leaky_relu_negative_slope: float = 0.1,
+                leaky_relu_negative_slope: float = 0.01,
                 share_weights: bool = False):
         r"""
         * `in_features`, $F$, is the number of input features per node
@@ -83,7 +83,7 @@ class DAAG_Layer(nn.Module):
         # Number of nodes
         B, SL, n_nodes, _ = h.shape
         Adj_mat = Adj_mat - torch.eye(n_nodes).to(Adj_mat.device).repeat(B, SL, 1, 1)
-        Adj_mat = Adj_mat.unsqueeze(-2) < 0.5
+        Adj_mat = Adj_mat.unsqueeze(-2) < 0.25
         q = self.linear_l(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         k = self.linear_r(-h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
         v = self.linear_v(h).view(B, SL, n_nodes, self.n_heads, self.n_hidden)
@@ -116,7 +116,7 @@ class TemporalConv(nn.Module):
         self.out = nn.Linear(hidden_size//2, hidden_size//2)
         self.LN = nn.LayerNorm(hidden_size)
         self.Rezero = nn.Parameter(torch.zeros(hidden_size//2))
-        self.dropout = nn.Dropout(0.25)
+        self.dropout = nn.Dropout(0.15)
         
     def forward(self, h):
         x0 = F.relu(self.conv1(h))

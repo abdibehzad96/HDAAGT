@@ -1,0 +1,105 @@
+
+Starting at:  13-52-13
+Loading CSV file ...
+Train size: 282, Test size: 31, Validation size: 1 
+Randomly splitting the data
+Train size: 31130, Test size: 310, Validation size: 0
+Creating model from scratch
+The number of learnable parameter is 3983254 !
+Epoch [1/45], Loss: 2.37, ADE: 138.669, FDE: 137.87
+Epoch [2/45], Loss: 1.45, ADE: 40.171, FDE: 52.36
+Epoch [3/45], Loss: 1.30, ADE: 25.412, FDE: 35.51
+Epoch [4/45], Loss: 1.21, ADE: 20.404, FDE: 28.73
+Starting testing phase
+ADE is : 16.837 px 
+ FDE is: 21.739 px 
+ Inference time: 438.315 ms
+During Training, Test ADE: 16.84, FDE: 21.74
+Epoch [5/45], Loss: 1.16, ADE: 17.754, FDE: 24.65
+Epoch [6/45], Loss: 1.12, ADE: 15.729, FDE: 21.79
+Epoch [7/45], Loss: 1.09, ADE: 14.118, FDE: 19.87
+Epoch [8/45], Loss: 1.08, ADE: 13.637, FDE: 19.69
+Epoch [9/45], Loss: 1.06, ADE: 12.481, FDE: 18.16
+Starting testing phase
+ADE is : 13.007 px 
+ FDE is: 18.197 px 
+ Inference time: 434.622 ms
+During Training, Test ADE: 13.01, FDE: 18.20
+Epoch [10/45], Loss: 1.04, ADE: 11.346, FDE: 16.83
+Epoch [11/45], Loss: 1.03, ADE: 10.659, FDE: 15.98
+Epoch [12/45], Loss: 1.02, ADE: 10.414, FDE: 15.84
+Epoch [13/45], Loss: 1.01, ADE: 9.648, FDE: 14.78
+Epoch [14/45], Loss: 1.00, ADE: 9.222, FDE: 14.22
+Starting testing phase
+ADE is : 11.501 px 
+ FDE is: 18.657 px 
+ Inference time: 434.387 ms
+During Training, Test ADE: 11.50, FDE: 18.66
+Epoch [15/45], Loss: 0.99, ADE: 8.936, FDE: 13.95
+Epoch [16/45], Loss: 0.98, ADE: 8.562, FDE: 13.26
+Epoch [17/45], Loss: 0.97, ADE: 8.270, FDE: 12.87
+Epoch [18/45], Loss: 0.97, ADE: 8.147, FDE: 12.63
+Epoch [19/45], Loss: 0.96, ADE: 8.030, FDE: 12.43
+Starting testing phase
+ADE is : 9.975 px 
+ FDE is: 16.598 px 
+ Inference time: 432.951 ms
+During Training, Test ADE: 9.98, FDE: 16.60
+Epoch [20/45], Loss: 0.96, ADE: 7.940, FDE: 12.36
+Epoch [21/45], Loss: 0.96, ADE: 7.838, FDE: 12.23
+Epoch [22/45], Loss: 0.96, ADE: 7.757, FDE: 12.10
+Epoch [23/45], Loss: 0.96, ADE: 7.697, FDE: 12.01
+Epoch [24/45], Loss: 0.95, ADE: 7.620, FDE: 11.92
+Starting testing phase
+ADE is : 9.832 px 
+ FDE is: 16.547 px 
+ Inference time: 434.800 ms
+During Training, Test ADE: 9.83, FDE: 16.55
+Epoch [25/45], Loss: 0.95, ADE: 7.572, FDE: 11.79
+Epoch [26/45], Loss: 0.95, ADE: 7.501, FDE: 11.76
+Epoch [27/45], Loss: 0.95, ADE: 7.427, FDE: 11.69
+Epoch [28/45], Loss: 0.95, ADE: 7.379, FDE: 11.57
+Epoch [29/45], Loss: 0.94, ADE: 7.331, FDE: 11.54
+Starting testing phase
+ADE is : 9.605 px 
+ FDE is: 16.615 px 
+ Inference time: 433.598 ms
+During Training, Test ADE: 9.61, FDE: 16.61
+Epoch [30/45], Loss: 0.94, ADE: 7.261, FDE: 11.42
+Epoch [31/45], Loss: 0.94, ADE: 7.224, FDE: 11.37
+Epoch [32/45], Loss: 0.94, ADE: 7.163, FDE: 11.28
+Epoch [33/45], Loss: 0.94, ADE: 7.148, FDE: 11.23
+Epoch [34/45], Loss: 0.94, ADE: 7.122, FDE: 11.18
+Starting testing phase
+ADE is : 9.077 px 
+ FDE is: 14.990 px 
+ Inference time: 435.540 ms
+During Training, Test ADE: 9.08, FDE: 14.99
+Epoch [35/45], Loss: 0.94, ADE: 7.110, FDE: 11.17
+Epoch [36/45], Loss: 0.94, ADE: 7.102, FDE: 11.18
+Epoch [37/45], Loss: 0.94, ADE: 7.077, FDE: 11.17
+Epoch [38/45], Loss: 0.94, ADE: 7.074, FDE: 11.07
+Epoch [39/45], Loss: 0.94, ADE: 7.057, FDE: 11.10
+Starting testing phase
+ADE is : 9.084 px 
+ FDE is: 15.027 px 
+ Inference time: 435.388 ms
+During Training, Test ADE: 9.08, FDE: 15.03
+Epoch [40/45], Loss: 0.94, ADE: 7.046, FDE: 11.07
+Epoch [41/45], Loss: 0.94, ADE: 7.043, FDE: 11.09
+Epoch [42/45], Loss: 0.94, ADE: 7.029, FDE: 11.03
+Epoch [43/45], Loss: 0.94, ADE: 7.023, FDE: 11.05
+Epoch [44/45], Loss: 0.93, ADE: 7.013, FDE: 11.01
+Starting testing phase
+ADE is : 9.031 px 
+ FDE is: 14.865 px 
+ Inference time: 433.938 ms
+During Training, Test ADE: 9.03, FDE: 14.87
+Epoch [45/45], Loss: 0.93, ADE: 7.005, FDE: 11.02
+Saving result of Learning rate: 0.0004, Hidden size: 128, Batch size: 128
+Training finished for 05-20-13-52!
+Starting testing phase
+ADE is : 9.022 px 
+ FDE is: 14.960 px 
+ Inference time: 433.605 ms
+Average Displacement Error: 9.02186107635498, Final Displacement Error: 14.960031509399414

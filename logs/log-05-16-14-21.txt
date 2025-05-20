@@ -1,0 +1,5 @@
+
+Starting at:  14-21-14
+Loading CSV file ...
+Train size: 282, Test size: 31, Validation size: 1 
+Randomly splitting the data
