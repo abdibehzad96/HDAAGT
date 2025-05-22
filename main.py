@@ -18,6 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run the main script with a config file.")
     parser.add_argument("-c", "--config", type=str, help="Path to the config.yaml file")
     args = parser.parse_args()
+    torch.cuda.empty_cache()
     # Otherwise we use the default directory to the config path
     if args.config is None:
         args.config = "configs/config.yaml"
@@ -28,8 +29,9 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
     ct = datetime.datetime.now().strftime("%m-%d-%H-%M") # Current time, used for saving the log
-    print(f"Total  # of GPUs {torch.cuda.device_count()}")
-    print(f"Using {device} device")
+    savelog(f"Total  # of GPUs {torch.cuda.device_count()}", ct)
+    savelog(f"Using {device} device", ct)
+    savelog(f' Model description: {config["description"]}', ct=ct)
 
     
     ZoneConf = Zoneconf(config['Zoneconf_path']) # This is the setting for zone configuration, you can find the image file at 'data/Zone Configuration.jpg'
@@ -66,22 +68,24 @@ if __name__ == '__main__':
         savelog("Loading CSV file ...", ct)
         Traffic_data = loadcsv(config['detection_path'], config['Headers'])
         Scenetr, Scenetst, Sceneval = Scene_Process(Scenetr, Scenetst, Sceneval, Traffic_data, config)
+        print(f"Augmenting the data {config['noise_multiply']} times")
         Scenetr.addnoise(config['noise_multiply'], config['noise_amp'], config['noise_ratio'])
         Scenetr.save_class('Pickled', cmnt = 'Train')
         Scenetst.save_class('Pickled', cmnt = 'Test')
         Sceneval.save_class('Pickled', cmnt = 'Validation')
     savelog(f"Train size: {len(Scenetr)}, Test size: {len(Scenetst)}, Validation size: {len(Sceneval)}", ct)
-    print("Augmenting the data ...")
+    
     
     train_loader, test_loader, val_loader = DataLoader_Scene(Scenetr, Scenetst, Sceneval, config['batch_size'])
     
 
     model = HDAAGT(config).to(device) # Here we define our model
-    savelog("Creating model from scratch",ct)
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=config['learning_rate'])
     scheduler = StepLR(optimizer, step_size=config['schd_stepzise'], gamma=config['gamma'])
-        
+    if not config['Load_Model']:
+        savelog("Creating model from scratch",ct)
     if config['Load_Model']:
         savelog("Loading model from the checkpoint", ct)
         model.load_state_dict(torch.load(config['Load_Model_Path'], map_location=device))

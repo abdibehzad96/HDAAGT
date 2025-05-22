@@ -1,0 +1,105 @@
+Total  # of GPUs 4
+Using cuda:3 device
+ Model description: No fisheye parameters + Temperature + 2s length
+Starting at:  13-34-32
+Loading data ...
+Train size: 21180, Test size: 390, Validation size: 0
+Creating model from scratch
+The number of learnable parameter is 3947038 !
+Epoch [1/45], Loss: 2.34, ADE: 151.862, FDE: 147.75
+Epoch [2/45], Loss: 1.29, ADE: 40.540, FDE: 50.07
+Epoch [3/45], Loss: 1.11, ADE: 24.609, FDE: 35.08
+Epoch [4/45], Loss: 1.01, ADE: 16.799, FDE: 24.42
+Starting testing phase
+ADE is : 14.337 px 
+ FDE is: 21.833 px 
+ Inference time: 307.807 ms
+During Training, Test ADE: 14.34, FDE: 21.83
+Epoch [5/45], Loss: 0.94, ADE: 13.194, FDE: 19.45
+Epoch [6/45], Loss: 0.90, ADE: 11.055, FDE: 16.75
+Epoch [7/45], Loss: 0.86, ADE: 9.446, FDE: 14.73
+Epoch [8/45], Loss: 0.83, ADE: 8.526, FDE: 13.66
+Epoch [9/45], Loss: 0.81, ADE: 7.807, FDE: 12.75
+Starting testing phase
+ADE is : 9.098 px 
+ FDE is: 16.087 px 
+ Inference time: 300.163 ms
+During Training, Test ADE: 9.10, FDE: 16.09
+Epoch [10/45], Loss: 0.79, ADE: 7.403, FDE: 12.16
+Epoch [11/45], Loss: 0.77, ADE: 6.916, FDE: 11.41
+Epoch [12/45], Loss: 0.75, ADE: 6.660, FDE: 11.10
+Epoch [13/45], Loss: 0.72, ADE: 6.052, FDE: 10.03
+Epoch [14/45], Loss: 0.71, ADE: 5.862, FDE: 9.73
+Starting testing phase
+ADE is : 7.831 px 
+ FDE is: 13.438 px 
+ Inference time: 301.607 ms
+During Training, Test ADE: 7.83, FDE: 13.44
+Epoch [15/45], Loss: 0.71, ADE: 5.756, FDE: 9.61
+Epoch [16/45], Loss: 0.70, ADE: 5.661, FDE: 9.48
+Epoch [17/45], Loss: 0.70, ADE: 5.588, FDE: 9.37
+Epoch [18/45], Loss: 0.69, ADE: 5.529, FDE: 9.27
+Epoch [19/45], Loss: 0.69, ADE: 5.449, FDE: 9.16
+Starting testing phase
+ADE is : 7.965 px 
+ FDE is: 13.334 px 
+ Inference time: 301.368 ms
+During Training, Test ADE: 7.96, FDE: 13.33
+Epoch [20/45], Loss: 0.68, ADE: 5.400, FDE: 9.08
+Epoch [21/45], Loss: 0.68, ADE: 5.352, FDE: 9.02
+Epoch [22/45], Loss: 0.68, ADE: 5.284, FDE: 8.90
+Epoch [23/45], Loss: 0.67, ADE: 5.225, FDE: 8.80
+Epoch [24/45], Loss: 0.67, ADE: 5.163, FDE: 8.70
+Starting testing phase
+ADE is : 7.686 px 
+ FDE is: 13.207 px 
+ Inference time: 299.389 ms
+During Training, Test ADE: 7.69, FDE: 13.21
+Epoch [25/45], Loss: 0.67, ADE: 5.159, FDE: 8.75
+Epoch [26/45], Loss: 0.67, ADE: 5.116, FDE: 8.64
+Epoch [27/45], Loss: 0.66, ADE: 5.077, FDE: 8.61
+Epoch [28/45], Loss: 0.66, ADE: 5.071, FDE: 8.58
+Epoch [29/45], Loss: 0.66, ADE: 5.054, FDE: 8.56
+Starting testing phase
+ADE is : 7.848 px 
+ FDE is: 13.052 px 
+ Inference time: 299.271 ms
+During Training, Test ADE: 7.85, FDE: 13.05
+Epoch [30/45], Loss: 0.66, ADE: 5.048, FDE: 8.58
+Epoch [31/45], Loss: 0.66, ADE: 5.018, FDE: 8.52
+Epoch [32/45], Loss: 0.66, ADE: 5.010, FDE: 8.55
+Epoch [33/45], Loss: 0.66, ADE: 4.994, FDE: 8.53
+Epoch [34/45], Loss: 0.66, ADE: 4.985, FDE: 8.50
+Starting testing phase
+ADE is : 7.787 px 
+ FDE is: 13.039 px 
+ Inference time: 299.381 ms
+During Training, Test ADE: 7.79, FDE: 13.04
+Epoch [35/45], Loss: 0.66, ADE: 4.962, FDE: 8.39
+Epoch [36/45], Loss: 0.66, ADE: 4.960, FDE: 8.41
+Epoch [37/45], Loss: 0.65, ADE: 4.934, FDE: 8.41
+Epoch [38/45], Loss: 0.65, ADE: 4.916, FDE: 8.35
+Epoch [39/45], Loss: 0.65, ADE: 4.907, FDE: 8.35
+Starting testing phase
+ADE is : 7.700 px 
+ FDE is: 12.982 px 
+ Inference time: 300.405 ms
+During Training, Test ADE: 7.70, FDE: 12.98
+Epoch [40/45], Loss: 0.65, ADE: 4.925, FDE: 8.44
+Epoch [41/45], Loss: 0.65, ADE: 4.910, FDE: 8.32
+Epoch [42/45], Loss: 0.65, ADE: 4.905, FDE: 8.34
+Epoch [43/45], Loss: 0.65, ADE: 4.915, FDE: 8.37
+Epoch [44/45], Loss: 0.65, ADE: 4.908, FDE: 8.33
+Starting testing phase
+ADE is : 7.681 px 
+ FDE is: 12.997 px 
+ Inference time: 299.911 ms
+During Training, Test ADE: 7.68, FDE: 13.00
+Epoch [45/45], Loss: 0.65, ADE: 4.910, FDE: 8.35
+Saving result of Learning rate: 0.0008, Hidden size: 128, Batch size: 128
+Training finished for 05-22-13-34!
+Starting testing phase
+ADE is : 7.678 px 
+ FDE is: 13.001 px 
+ Inference time: 521.051 ms
+Average Displacement Error: 7.678303241729736, Final Displacement Error: 13.001371383666992

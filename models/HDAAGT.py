@@ -177,7 +177,7 @@ class HDAAGT(nn.Module):
         self.proj = Projection(3*self.hidden_size, output_size, output_dict_size= config['output_dict_size'], Nnodes= Nnodes)
     def forward(self, scene: torch.Tensor, src_mask, adj_mat: torch.Tensor):
         enc_out = self.encoder(scene, src_mask, adj_mat)
-        proj = self.proj(enc_out)
+        proj = self.proj(enc_out)/20 # Temperature for 3s, the 20 is good
         return proj
 
 if __name__ == "__main__":

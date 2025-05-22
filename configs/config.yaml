@@ -2,12 +2,13 @@
 
 # General startup parameters
 model_name: "HDAAGT"
+description: "No fisheye parameters + Temperature + 4s length"
 verbal: false # If true, it will print the configs parameters
 detection_path: 'data/Fisheye-MARC.csv'
 Zoneconf_path: 'configs/ZoneConf.yaml'
-generate_data: false #  Add class by loading the CSV file
+generate_data: true #  Add class by loading the CSV file
 Load_Model: false # It's for creating model from scratch
-Load_Model_Path: 'Pickled/best_trained_model05-09-15-53.pth' # The path of the model to be loaded
+Load_Model_Path: 'Pickled/best_trained_model05-22-09-03.pth' # The path of the model to be loaded
 Train: true # It's for training the model with the prepared data
 Test: true # It's for testing the model with the prepared data
 Test_during_training: true # It's for testing the model during training
@@ -28,12 +29,12 @@ output_dict_size: 1024
 Headers: ['Frame', 'ID', 'BBx', 'BBy','W', 'L' , 'Cls','Tr1', 'Tr2', 'Tr3', 'Tr4', 'Zone', 'Xreal', 'Yreal']
 Columns_to_keep: [2, 3, 11, 7, 8, 9, 10] #['BBx', 'BBy','Zone','Tr1', 'Tr2', 'Tr3', 'Tr4']
 trf_embedding_dict_size: [12, 9, 9, 9, 9] # size of the embedding dictionary for ['Zone','Tr1', 'Tr2', 'Tr3', 'Tr4']
-trf_embedding_dim: [32, 24, 24, 24, 24] # size of the model dimension for ['Zone','Tr1', 'Tr2', 'Tr3', 'Tr4']
+trf_embedding_dim: [64, 48, 48, 48, 48] # size of the model dimension for ['Zone','Tr1', 'Tr2', 'Tr3', 'Tr4']
 pos_embedding_dict_size: [1024, 1024]
 pos_embedding_dim: [128, 128]
 xy_indx: [0, 1] # the index of x and y  of the Columns_to_Keep used for speed calculation function
 Traffic_indx: [2, 3, 4, 5, 6] # the index of the traffic light of the Columns_to_Keep used for speed calculation function
-Linear_indx: [10, 11, 12,13,14,15,16,17,18,19,20,21,22]
+Linear_indx: [9] #[10, 11, 12,13,14,15,16,17,18,19,20,21,22]
 sos: [1008,1008, 10, 7,7,7,7] # This is the start of the sequence for categorical variables
 eos: [1016,1016, 11, 8,8,8,8] # This is the end of the sequence for categorical variables
 NZones: 10
@@ -44,16 +45,16 @@ sw: 4 # sliding window for preparation of the dataset
 sn: 10 # 
 Centre: [512,512] # The centre of the image
 dwn_smple: 2 # we can downsample the sequence length or future prediction by this factor
-noise_multiply: 10 
-noise_amp: 6 # pixels
+noise_multiply: 5
+noise_amp: 3 # pixels
 noise_ratio: 0.5 # probability of the noise
 
 
 
 # Training parameters
-learning_rate: !!float 4e-04
-schd_stepzise: 15
-gamma: 0.15
+learning_rate: !!float 8e-04
+schd_stepzise: 12
+gamma: 0.2
 epochs: 45
 patience_limit: 5
 clip: 0.25

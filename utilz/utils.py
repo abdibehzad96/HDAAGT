@@ -97,7 +97,7 @@ class Scenes(Dataset):
             noisy_tar = init_Target + noise * rand * trmask
             self.Scene = torch.cat((self.Scene, noisy_scene), dim=0)
             self.Adj_Mat_Scene = torch.cat((self.Adj_Mat_Scene, init_Adj_Mat_Scene), dim=0)
-            self.Target = torch.cat((self.Target, noisy_tar), dim=0)
+            self.Target = torch.cat((self.Target, init_Target), dim=0) # For now let's not add noise to the target; noisy_tar
 
 
 
