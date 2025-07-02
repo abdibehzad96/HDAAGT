@@ -18,7 +18,7 @@ def train_model(model, optimizer, criterion, scheduler, train_loader, test_loade
             optimizer.zero_grad()
             Scene, Scene_mask, Adj_Mat, Target = prep_model_input(Scene, Adj_Mat_Scene,Target, sos, eos, config)
             outputs = model(Scene, Scene_mask, Adj_Mat)
-            loss = criterion(outputs.reshape(-1, 1024), Target.reshape(-1).long())
+            loss = criterion(outputs.reshape(-1,5, 1025), Target.reshape(-1).long()) # was outputs.reshape(-1, 1024)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), config['clip'])
             optimizer.step()

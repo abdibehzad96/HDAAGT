@@ -2,11 +2,11 @@
 
 # General startup parameters
 model_name: "HDAAGT"
-description: "No fisheye parameters + Temperature + 4s length"
+description: "No fisheye parameters + Multi-modal"
 verbal: false # If true, it will print the configs parameters
 detection_path: 'data/Fisheye-MARC.csv'
 Zoneconf_path: 'configs/ZoneConf.yaml'
-generate_data: true #  Add class by loading the CSV file
+generate_data: false #  Add class by loading the CSV file
 Load_Model: false # It's for creating model from scratch
 Load_Model_Path: 'Pickled/best_trained_model05-22-09-03.pth' # The path of the model to be loaded
 Train: true # It's for training the model with the prepared data
@@ -53,10 +53,10 @@ noise_ratio: 0.5 # probability of the noise
 
 # Training parameters
 learning_rate: !!float 8e-04
-schd_stepzise: 12
-gamma: 0.2
-epochs: 45
+schd_stepzise: 15
+gamma: 0.25
+epochs: 100
 patience_limit: 5
 clip: 0.25
-batch_size: 128
+batch_size: 256
 device: 'cuda:3'

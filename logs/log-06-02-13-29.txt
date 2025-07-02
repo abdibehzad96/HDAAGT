@@ -1,0 +1,46 @@
+
+Total  # of GPUs 4
+Using cuda:3 device
+ Model description: No fisheye parameters + Temperature + 4s length
+Starting at:  13-29-14
+Loading data ...
+Train size: 16980, Test size: 310, Validation size: 0
+Creating model from scratch
+The number of learnable parameter is 3948894 !
+Epoch [1/100], Loss: 468757.75, ADE: 168.776, FDE: 153.42
+Epoch [2/100], Loss: 484395.22, ADE: 163.800, FDE: 146.61
+Epoch [3/100], Loss: 498532.93, ADE: 167.708, FDE: 151.60
+Epoch [4/100], Loss: 489883.48, ADE: 169.475, FDE: 155.89
+Starting testing phase
+ADE is : 166.561 px 
+ FDE is: 153.039 px 
+ Inference time: 450.844 ms
+During Training, Test ADE: 166.56, FDE: 153.04
+Epoch [5/100], Loss: 459971.94, ADE: 171.135, FDE: 156.86
+Epoch [6/100], Loss: 450848.91, ADE: 168.951, FDE: 152.53
+Epoch [7/100], Loss: 386991.17, ADE: 167.233, FDE: 154.01
+Epoch [8/100], Loss: 364299.99, ADE: 165.101, FDE: 153.86
+Epoch [9/100], Loss: 333358.03, ADE: 163.032, FDE: 152.62
+Starting testing phase
+ADE is : 162.052 px 
+ FDE is: 151.081 px 
+ Inference time: 431.679 ms
+During Training, Test ADE: 162.05, FDE: 151.08
+Epoch [10/100], Loss: 395097.73, ADE: 164.634, FDE: 153.64
+Epoch [11/100], Loss: 384781.17, ADE: 170.453, FDE: 158.32
+Epoch [12/100], Loss: 383555.90, ADE: 170.359, FDE: 158.60
+Epoch [13/100], Loss: 385310.52, ADE: 167.640, FDE: 156.42
+Epoch [14/100], Loss: 383711.44, ADE: 169.267, FDE: 157.67
+Starting testing phase
+ADE is : 170.306 px 
+ FDE is: 152.646 px 
+ Inference time: 430.655 ms
+During Training, Test ADE: 170.31, FDE: 152.65
+Epoch [15/100], Loss: 383465.93, ADE: 170.081, FDE: 158.44
+early stopping, Patience lvl1 , lvl2 6
+Training finished for 06-02-13-29!
+Starting testing phase
+ADE is : 170.772 px 
+ FDE is: 155.253 px 
+ Inference time: 430.490 ms
+Average Displacement Error: 170.77175903320312, Final Displacement Error: 155.25326538085938

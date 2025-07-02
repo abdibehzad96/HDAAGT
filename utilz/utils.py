@@ -324,13 +324,17 @@ def zonefinder(BB, Zones):
     return PredZone.reshape(B, Nnodes)
 
 
-def Find_topk_selected_words (Pred_target, Target):
-    Word_Probs = Pred_target.softmax(dim=-1)
-    top_values, top_indices = torch.topk(Word_Probs, k = 5, dim=-1)
+def Find_topk_selected_words (Pred, Target):
+    Word_Probs = Pred[...,1:].softmax(dim=-1)
+    # Word_Probs = Pred_target.softmax(dim=-1)
+    top_values, top_indices = torch.topk(Word_Probs, k = 1, dim=-1)
     Topk_Selected_words = (top_indices*top_values).sum(-1)/top_values.sum(-1)
-    flg = Target[:,:,:,:1] != 0 # We have blank rows in the data as the number of present agents changes during time
-    ADE = torch.sqrt(torch.pow((Topk_Selected_words*flg -Target),2).sum(-1)).mean()
-    FDE = torch.sqrt(torch.pow((Topk_Selected_words*flg -Target),2).sum(-1)[:,-1]).mean()
+    distance = torch.abs(Topk_Selected_words - Target.unsqueeze(-1))  # [B, Nnodes, output_size]
+    weights = torch.nn.functional.softmin(distance / 1, dim=-1)
+    Topk_Selected_words = torch.sum(weights * Topk_Selected_words, -1)
+    mask = Target[...,:1] != 0 # We have blank rows in the data as the number of present agents changes during time
+    ADE = torch.sqrt(torch.pow((Topk_Selected_words*mask -Target),2).sum(-1)).mean()
+    FDE = torch.sqrt(torch.pow((Topk_Selected_words*mask -Target),2).sum(-1)[:,-1]).mean()
     return Topk_Selected_words, ADE, FDE
 
 

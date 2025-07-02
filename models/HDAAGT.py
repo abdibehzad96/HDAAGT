@@ -156,14 +156,15 @@ class Projection(nn.Module):
         self.output_dict_size = output_dict_size
         self.Nnodes = Nnodes
         self.LN = nn.LayerNorm(hidden_size)
-        self.linear2 = nn.Linear(hidden_size, output_size*output_dict_size)
+        self.linear2 = nn.Linear(hidden_size, 5*output_size*(output_dict_size+1))
         self.output_size = output_size
         
 
     def forward(self, x):
         B, SL, _ = x.size()
-        x = self.LN(x)
-        x = self.linear2(x).reshape(B//self.Nnodes, self.Nnodes,  SL, self.output_size, self.output_dict_size).permute(0,2,1,3,4) # [B, SL, Nnodes, output_size, output_dict_size]
+        # x = self.LN(x)
+        x = F.leaky_relu(x, negative_slope=0.01)  # [B, SL, 3*hidden_size]
+        x = self.linear2(x).reshape(B//self.Nnodes, self.Nnodes,  SL, self.output_size, 5, self.output_dict_size+1).permute(0,2,1,3,4,5) # [B, SL, Nnodes, output_size, M, output_dict_size]
         return x
 
 
@@ -177,7 +178,7 @@ class HDAAGT(nn.Module):
         self.proj = Projection(3*self.hidden_size, output_size, output_dict_size= config['output_dict_size'], Nnodes= Nnodes)
     def forward(self, scene: torch.Tensor, src_mask, adj_mat: torch.Tensor):
         enc_out = self.encoder(scene, src_mask, adj_mat)
-        proj = self.proj(enc_out)/20 # Temperature for 3s, the 20 is good
+        proj = self.proj(enc_out) # Temperature for 3s, the 20 is good
         return proj
 
 if __name__ == "__main__":

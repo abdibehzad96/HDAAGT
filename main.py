@@ -12,6 +12,7 @@ import argparse
 from utilz.utils import *
 from train_test import *
 from models.HDAAGT import *
+from models.loss import dist_softmax
 
 if __name__ == '__main__':
     # If the model is run through terminal
@@ -81,7 +82,8 @@ if __name__ == '__main__':
 
     model = HDAAGT(config).to(device) # Here we define our model
     
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = dist_softmax()
     optimizer = optim.AdamW(model.parameters(), lr=config['learning_rate'])
     scheduler = StepLR(optimizer, step_size=config['schd_stepzise'], gamma=config['gamma'])
     if not config['Load_Model']:
