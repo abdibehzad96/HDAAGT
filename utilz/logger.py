@@ -41,21 +41,20 @@ def setup_logger(name='HDAAGT', log_dir='logs', log_filename=None, level=logging
     if logger.handlers:
         logger.handlers.clear()
     
-    # Create formatters
+    # Create formatter
     # Using simple message-only format to match the existing log format
     # This maintains backward compatibility with existing log parsing tools
-    file_formatter = logging.Formatter('%(message)s')
-    console_formatter = logging.Formatter('%(message)s')
+    formatter = logging.Formatter('%(message)s')
     
     # Create and configure file handler
     file_handler = logging.FileHandler(log_path, mode='a')
     file_handler.setLevel(level)
-    file_handler.setFormatter(file_formatter)
+    file_handler.setFormatter(formatter)
     
     # Create and configure console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
-    console_handler.setFormatter(console_formatter)
+    console_handler.setFormatter(formatter)
     
     # Add handlers to logger
     logger.addHandler(file_handler)
