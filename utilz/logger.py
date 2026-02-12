@@ -26,6 +26,8 @@ def setup_logger(name='HDAAGT', log_dir='logs', log_filename=None, level=logging
     
     # Generate log filename if not provided
     if log_filename is None:
+        # Use timestamp format matching the existing convention in main.py
+        # Format: MM-DD-HH-MM (month-day-hour-minute)
         timestamp = datetime.now().strftime("%m-%d-%H-%M")
         log_filename = f"log-{timestamp}.txt"
     
@@ -40,6 +42,8 @@ def setup_logger(name='HDAAGT', log_dir='logs', log_filename=None, level=logging
         logger.handlers.clear()
     
     # Create formatters
+    # Using simple message-only format to match the existing log format
+    # This maintains backward compatibility with existing log parsing tools
     file_formatter = logging.Formatter('%(message)s')
     console_formatter = logging.Formatter('%(message)s')
     

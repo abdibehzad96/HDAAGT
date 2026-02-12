@@ -286,7 +286,17 @@ def loadcsv(frmpath, Header, trjpath = None):
     return df
 
 
-def savelog(log, ct): # appends the log to the existing log file while keeping the old logs
+def savelog(log, ct):
+    """
+    Append log message to the log file and print to console.
+    
+    Args:
+        log: The log message to write
+        ct: Current timestamp string (retained for backward compatibility with fallback method)
+    
+    Note: When logger is configured, uses the centralized logger. Otherwise, falls back
+    to the original file-based logging method which requires the ct parameter.
+    """
     # Use the new logger which handles both console and file output
     # If logger is not configured (no handlers), fallback to the old file-based method
     logger = get_logger()
