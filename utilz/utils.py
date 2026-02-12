@@ -286,13 +286,21 @@ def loadcsv(frmpath, Header, trjpath = None):
 
 
 def savelog(log, ct): # appends the log to the existing log file while keeping the old logs
-    # if the log file does not exist, create one
-    print(log)
-    if not os.path.exists(os.path.join(os.getcwd(),'logs')):
-        os.mkdir(os.path.join(os.getcwd(),'logs'))
-    with open(os.path.join(os.getcwd(),'logs', f'log-{ct}.txt'), 'a') as file:
-        file.write('\n' + log)
-        file.close()
+    # Use the new logger if available, otherwise fallback to the old method
+    from utilz.logger import get_logger
+    logger = get_logger()
+    
+    # Log using the logger (which handles both console and file output)
+    if logger.handlers:
+        logger.info(log)
+    else:
+        # Fallback to old method if logger is not initialized
+        print(log)
+        if not os.path.exists(os.path.join(os.getcwd(),'logs')):
+            os.mkdir(os.path.join(os.getcwd(),'logs'))
+        with open(os.path.join(os.getcwd(),'logs', f'log-{ct}.txt'), 'a') as file:
+            file.write('\n' + log)
+            file.close()
 
 
 def Zoneconf(path = '/utilz/ZoneConf.yaml'):

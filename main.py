@@ -10,6 +10,7 @@ import datetime
 import argparse
 # The rest is HDAAGT specific imports
 from utilz.utils import *
+from utilz.logger import setup_logger
 from train_test import *
 from models.HDAAGT import *
 
@@ -29,6 +30,10 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
     ct = datetime.datetime.now().strftime("%m-%d-%H-%M") # Current time, used for saving the log
+    
+    # Initialize logger
+    logger = setup_logger(name='HDAAGT', log_dir='logs', log_filename=f'log-{ct}.txt')
+    
     savelog(f"Total  # of GPUs {torch.cuda.device_count()}", ct)
     savelog(f"Using {device} device", ct)
     savelog(f' Model description: {config["description"]}', ct=ct)
