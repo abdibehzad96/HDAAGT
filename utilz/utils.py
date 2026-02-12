@@ -6,6 +6,7 @@ import pandas as pd
 import yaml
 import re
 from shapely.geometry import Point, Polygon
+from utilz.logger import get_logger
 
 class Scenes(Dataset):
     def __init__(self, config): 
@@ -286,21 +287,21 @@ def loadcsv(frmpath, Header, trjpath = None):
 
 
 def savelog(log, ct): # appends the log to the existing log file while keeping the old logs
-    # Use the new logger if available, otherwise fallback to the old method
-    from utilz.logger import get_logger
+    # Use the new logger which handles both console and file output
+    # If logger is not configured (no handlers), fallback to the old file-based method
     logger = get_logger()
     
-    # Log using the logger (which handles both console and file output)
     if logger.handlers:
+        # Log using the logger (which handles both console and file output)
         logger.info(log)
     else:
-        # Fallback to old method if logger is not initialized
+        # Fallback to old method if logger has no handlers configured
         print(log)
         if not os.path.exists(os.path.join(os.getcwd(),'logs')):
             os.mkdir(os.path.join(os.getcwd(),'logs'))
         with open(os.path.join(os.getcwd(),'logs', f'log-{ct}.txt'), 'a') as file:
             file.write('\n' + log)
-            file.close()
+
 
 
 def Zoneconf(path = '/utilz/ZoneConf.yaml'):
