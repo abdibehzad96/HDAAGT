@@ -6,6 +6,7 @@ import pandas as pd
 import yaml
 import re
 from shapely.geometry import Point, Polygon
+from utilz.logger import get_logger
 
 class Scenes(Dataset):
     def __init__(self, config): 
@@ -285,14 +286,32 @@ def loadcsv(frmpath, Header, trjpath = None):
     return df
 
 
-def savelog(log, ct): # appends the log to the existing log file while keeping the old logs
-    # if the log file does not exist, create one
-    print(log)
-    if not os.path.exists(os.path.join(os.getcwd(),'logs')):
-        os.mkdir(os.path.join(os.getcwd(),'logs'))
-    with open(os.path.join(os.getcwd(),'logs', f'log-{ct}.txt'), 'a') as file:
-        file.write('\n' + log)
-        file.close()
+def savelog(log, ct):
+    """
+    Append log message to the log file and print to console.
+    
+    Args:
+        log: The log message to write
+        ct: Current timestamp string (retained for backward compatibility with fallback method)
+    
+    Note: When logger is configured, uses the centralized logger. Otherwise, falls back
+    to the original file-based logging method which requires the ct parameter.
+    """
+    # Use the new logger which handles both console and file output
+    # If logger is not configured (no handlers), fallback to the old file-based method
+    logger = get_logger()
+    
+    if logger.handlers:
+        # Log using the logger (which handles both console and file output)
+        logger.info(log)
+    else:
+        # Fallback to old method if logger has no handlers configured
+        print(log)
+        if not os.path.exists(os.path.join(os.getcwd(),'logs')):
+            os.mkdir(os.path.join(os.getcwd(),'logs'))
+        with open(os.path.join(os.getcwd(),'logs', f'log-{ct}.txt'), 'a') as file:
+            file.write('\n' + log)
+
 
 
 def Zoneconf(path = '/utilz/ZoneConf.yaml'):

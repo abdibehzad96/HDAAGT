@@ -10,6 +10,14 @@ Other/
 *.log
 *.json
 
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Log files
+logs/*.txt
+
 Notes.md
 data/ModifiedData.csv
 test.py
